@@ -1,22 +1,22 @@
 {
-    "name": "<pytool-module>",
-    "displayName": "<pytool-display-name>",
-    "description": "Linting support for python files using `<pytool-module>`.",
+    "name": "kedro-lsp",
+    "displayName": "kedro-lsp",
+    "description": "Linting support for python files using `kedro-lsp`.",
     "version": "2022.0.0-dev",
     "preview": true,
     "serverInfo": {
-        "name": "<pytool-display-name>",
-        "module": "<pytool-module>"
+        "name": "kedro-lsp",
+        "module": "kedro-lsp"
     },
-    "publisher": "<my-publisher>",
+    "publisher": "noklam",
     "license": "MIT",
-    "homepage": "https://github.com/<my-github>/<my-extension-project>",
+    "homepage": "https://github.com/noklam/vscode-python-tools-extension-template",
     "repository": {
         "type": "git",
-        "url": "https://github.com/<my-github>/<my-extension-project>.git"
+        "url": "https://github.com/noklam/vscode-python-tools-extension-template.git"
     },
     "bugs": {
-        "url": "https://github.com/<my-github>/<my-extension-project>/issues"
+        "url": "https://github.com/noklam/vscode-python-tools-extension-template/issues"
     },
     "galleryBanner": {
         "color": "#1e415e",
@@ -24,7 +24,7 @@
     },
     "keywords": [
         "python",
-        "<pytool-module>"
+        "kedro-lsp"
     ],
     "engines": {
         "vscode": "^1.78.0"
@@ -40,7 +40,7 @@
     "capabilities": {
         "virtualWorkspaces": {
             "supported": false,
-            "description": "Virtual Workspaces are not supported with <pytool-display-name>."
+            "description": "Virtual Workspaces are not supported with kedro-lsp."
         }
     },
     "activationEvents": [
@@ -59,12 +59,12 @@
         "lint": "eslint src --ext ts",
         "format-check": "prettier --check 'src/**/*.ts' 'build/**/*.yml' '.github/**/*.yml'",
         "test": "node ./out/test/runTest.js",
-        "vsce-package": "vsce package -o <pytool-module>.vsix"
+        "vsce-package": "vsce package -o kedro-lsp.vsix"
     },
     "contributes": {
         "configuration": {
             "properties": {
-                "<pytool-module>.args": {
+                "kedro-lsp.args": {
                     "default": [],
                     "description": "Arguments passed in. Each argument is a separate item in the array.",
                     "items": {
@@ -73,30 +73,30 @@
                     "scope": "resource",
                     "type": "array"
                 },
-                "<pytool-module>.path": {
+                "kedro-lsp.path": {
                     "default": [],
-                    "description": "When set to a path to <pytool-module> binary, extension will use that. NOTE: Using this option may slowdown server response time.",
+                    "description": "When set to a path to kedro-lsp binary, extension will use that. NOTE: Using this option may slowdown server response time.",
                     "scope": "resource",
                     "items": {
                         "type": "string"
                     },
                     "type": "array"
                 },
-                "<pytool-module>.importStrategy": {
+                "kedro-lsp.importStrategy": {
                     "default": "useBundled",
-                    "description": "Defines where `<pytool-module>` is imported from. This setting may be ignored if `<pytool-module>.path` is set.",
+                    "description": "Defines where `kedro-lsp` is imported from. This setting may be ignored if `kedro-lsp.path` is set.",
                     "enum": [
                         "useBundled",
                         "fromEnvironment"
                     ],
                     "enumDescriptions": [
-                        "Always use the bundled version of `<pytool-module>`.",
-                        "Use `<pytool-module>` from environment, fallback to bundled version only if `<pytool-module>` not available in the environment."
+                        "Always use the bundled version of `kedro-lsp`.",
+                        "Use `kedro-lsp` from environment, fallback to bundled version only if `kedro-lsp` not available in the environment."
                     ],
                     "scope": "window",
                     "type": "string"
                 },
-                "<pytool-module>.interpreter": {
+                "kedro-lsp.interpreter": {
                     "default": [],
                     "description": "When set to a path to python executable, extension will use that to launch the server and any subprocess.",
                     "scope": "resource",
@@ -105,7 +105,7 @@
                     },
                     "type": "array"
                 },
-                "<pytool-module>.showNotifications": {
+                "kedro-lsp.showNotifications": {
                     "default": "off",
                     "description": "Controls when notifications are shown by this extension.",
                     "enum": [
@@ -128,8 +128,8 @@
         "commands": [
             {
                 "title": "Restart Server",
-                "category": "<pytool-display-name>",
-                "command": "<pytool-module>.restart"
+                "category": "kedro-lsp",
+                "command": "kedro-lsp.restart"
             }
         ]
     },
