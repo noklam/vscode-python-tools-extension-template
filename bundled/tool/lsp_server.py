@@ -46,322 +46,246 @@ GLOBAL_SETTINGS = {}
 RUNNER = pathlib.Path(__file__).parent / "lsp_runner.py"
 
 MAX_WORKERS = 5
-# TODO: Update the language server name and version.
-LSP_SERVER = server.LanguageServer(
-    name="<pytool-display-name>", version="<server version>", max_workers=MAX_WORKERS
+
+
+# ******************************************************
+# Kedro LSP Server.
+# ******************************************************
+import re
+
+from lsprotocol.types import (
+    TEXT_DOCUMENT_CODE_ACTION,
+    TEXT_DOCUMENT_DEFINITION,
+    WORKSPACE_DID_CHANGE_CONFIGURATION,
+    CodeAction,
+    CodeActionKind,
+    CodeActionOptions,
+    CodeActionParams,
+    DidChangeConfigurationParams,
+    InitializeParams,
+    InitializeResult,
+    Location,
+    Position,
+    Range,
+    TextDocumentPositionParams,
+    TextEdit,
+    WorkspaceEdit,
 )
+from pygls.server import LanguageServer
+from pygls.workspace import Document
+
+"""Kedro Language Server."""
+import re
+from typing import List, Optional
+
+import yaml
+from pygls.protocol import LanguageServerProtocol
+from pygls.server import LanguageServer
+from yaml.loader import SafeLoader
+
+# Need to stop kedro.framework.project.LOGGING from changing logging settings, otherwise pygls fails with unknown reason.
+
+from kedro.framework.project import configure_project
+from kedro.framework.session import KedroSession
+from kedro.framework.startup import ProjectMetadata, _get_project_metadata, bootstrap_project
+
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.debug("DEBUG")
+logger.info("INFO")
+logger.warn("WARN")
+print("Checkpoint 1")
 
 
-# **********************************************************
-# Tool specific code goes below this.
-# **********************************************************
 
-# Reference:
-#  LS Protocol:
-#  https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/
-#
-#  Sample implementations:
-#  Pylint: https://github.com/microsoft/vscode-pylint/blob/main/bundled/tool
-#  Black: https://github.com/microsoft/vscode-black-formatter/blob/main/bundled/tool
-#  isort: https://github.com/microsoft/vscode-isort/blob/main/bundled/tool
+class KedroLanguageServer(LanguageServer):
+    """Store Kedro-specific information in the language server."""
 
-# TODO: Update TOOL_MODULE with the module name for your tool.
-# e.g, TOOL_MODULE = "pylint"
-TOOL_MODULE = "<pytool-module>"
-
-# TODO: Update TOOL_DISPLAY with a display name for your tool.
-# e.g, TOOL_DISPLAY = "Pylint"
-TOOL_DISPLAY = "<pytool-display-name>"
-
-# TODO: Update TOOL_ARGS with default argument you have to pass to your tool in
-# all scenarios.
-TOOL_ARGS = []  # default arguments always passed to your tool.
+    project_metadata: Optional[ProjectMetadata]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print(f"DEBUG: init KedroLanguageServer")
+        try:
+            project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
+        except RuntimeError:
+            project_metadata = None
+        finally:
+            self.project_metadata = project_metadata
+    def is_kedro_project(self) -> bool:
+        """Returns whether the current workspace is a kedro project."""
+        return self.project_metadata is not None
 
 
-# TODO: If your tool is a linter then update this section.
-# Delete "Linting features" section if your tool is NOT a linter.
-# **********************************************************
-# Linting features start here
-# **********************************************************
 
-#  See `pylint` implementation for a full featured linter extension:
-#  Pylint: https://github.com/microsoft/vscode-pylint/blob/main/bundled/tool
+SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
+LSP_SERVER = SERVER
 
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_OPEN)
-def did_open(params: lsp.DidOpenTextDocumentParams) -> None:
-    """LSP handler for textDocument/didOpen request."""
-    document = LSP_SERVER.workspace.get_document(params.text_document.uri)
-    diagnostics: list[lsp.Diagnostic] = _linting_helper(document)
-    LSP_SERVER.publish_diagnostics(document.uri, diagnostics)
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_SAVE)
-def did_save(params: lsp.DidSaveTextDocumentParams) -> None:
-    """LSP handler for textDocument/didSave request."""
-    document = LSP_SERVER.workspace.get_document(params.text_document.uri)
-    diagnostics: list[lsp.Diagnostic] = _linting_helper(document)
-    LSP_SERVER.publish_diagnostics(document.uri, diagnostics)
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_DID_CLOSE)
-def did_close(params: lsp.DidCloseTextDocumentParams) -> None:
-    """LSP handler for textDocument/didClose request."""
-    document = LSP_SERVER.workspace.get_document(params.text_document.uri)
-    # Publishing empty diagnostics to clear the entries for this file.
-    LSP_SERVER.publish_diagnostics(document.uri, [])
+# server = LanguageServer("nok-kedro-server", "v0.1")
+ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)")
+RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
+RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
+print("Checkpoint 2")
+### From Old kedro-lsp
+def get_conf_paths(project_metadata):
+    """
+    Get conf paths using the default kedro patterns, and the CONF_ROOT
+    directory set in the projects settings.py
+    """
+    bootstrap_project(project_metadata.project_path)
+    configure_project(project_metadata.package_name)
+    session = KedroSession.create(project_metadata.package_name)
+    context = session.load_context()
+    # pats = ("catalog*", "catalog*/**", "**/catalog*")
+    # config_loader = context.config_loader._lookup_config_filepaths(Path(context.config_loader.conf_paths[0]), pats, set())
+    config_loader = context.config_loader
+    return config_loader
 
 
-def _linting_helper(document: workspace.Document) -> list[lsp.Diagnostic]:
-    # TODO: Determine if your tool supports passing file content via stdin.
-    # If you want to support linting on change then your tool will need to
-    # support linting over stdin to be effective. Read, and update
-    # _run_tool_on_document and _run_tool functions as needed for your project.
-    result = _run_tool_on_document(document)
-    return _parse_output_using_regex(result.stdout) if result.stdout else []
+class SafeLineLoader(SafeLoader):  # pylint: disable=too-many-ancestors
+    """A YAML loader that annotates loaded nodes with line number."""
+
+    def construct_mapping(self, node, deep=False):
+        mapping = super().construct_mapping(node, deep=deep)
+        mapping["__line__"] = node.start_mark.line
+        return mapping
 
 
-# TODO: If your linter outputs in a known format like JSON, then parse
-# accordingly. But incase you need to parse the output using RegEx here
-# is a helper you can work with.
-# flake8 example:
-# If you use following format argument with flake8 you can use the regex below to parse it.
-# TOOL_ARGS += ["--format='%(row)d,%(col)d,%(code).1s,%(code)s:%(text)s'"]
-# DIAGNOSTIC_RE =
-#    r"(?P<line>\d+),(?P<column>-?\d+),(?P<type>\w+),(?P<code>\w+\d+):(?P<message>[^\r\n]*)"
-DIAGNOSTIC_RE = re.compile(r"")
+@SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
+def did_change_configuration(
+    server: KedroLanguageServer,  # pylint: disable=unused-argument
+    params: DidChangeConfigurationParams,  # pylint: disable=unused-argument
+) -> None:
+    """Implement event for workspace/didChangeConfiguration.
+    Currently does nothing, but necessary for pygls.
+    """
 
 
-def _parse_output_using_regex(content: str) -> list[lsp.Diagnostic]:
-    lines: list[str] = content.splitlines()
-    diagnostics: list[lsp.Diagnostic] = []
+def _word_at_position(position: Position, document: Document) -> str:
+    """Get the word under the cursor returning the start and end positions."""
+    if position.line >= len(document.lines):
+        return ""
+    print(f"\nCalled _word_at_position")
+    line = document.lines[position.line]
+    i = position.character
+    # Split word in two
+    start = line[:i]
+    end = line[i:]
 
-    # TODO: Determine if your linter reports line numbers starting at 1 (True) or 0 (False).
-    line_at_1 = True
-    # TODO: Determine if your linter reports column numbers starting at 1 (True) or 0 (False).
-    column_at_1 = True
+    # Take end of start and start of end to find word
+    # These are guaranteed to match, even if they match the empty string
+    m_start = RE_START_WORD.findall(start)
+    m_end = RE_END_WORD.findall(end)
 
-    line_offset = 1 if line_at_1 else 0
-    col_offset = 1 if column_at_1 else 0
-    for line in lines:
-        if line.startswith("'") and line.endswith("'"):
-            line = line[1:-1]
-        match = DIAGNOSTIC_RE.match(line)
-        if match:
-            data = match.groupdict()
-            position = lsp.Position(
-                line=max([int(data["line"]) - line_offset, 0]),
-                character=int(data["column"]) - col_offset,
-            )
-            diagnostic = lsp.Diagnostic(
-                range=lsp.Range(
-                    start=position,
-                    end=position,
-                ),
-                message=data.get("message"),
-                severity=_get_severity(data["code"], data["type"]),
-                code=data["code"],
-                source=TOOL_MODULE,
-            )
-            diagnostics.append(diagnostic)
-
-    return diagnostics
+    return m_start[0] + m_end[-1]
 
 
-# TODO: if you want to handle setting specific severity for your linter
-# in a user configurable way, then look at look at how it is implemented
-# for `pylint` extension from our team.
-# Pylint: https://github.com/microsoft/vscode-pylint
-# Follow the flow of severity from the settings in package.json to the server.
-def _get_severity(*_codes: list[str]) -> lsp.DiagnosticSeverity:
-    # TODO: All reported issues from linter are treated as warning.
-    # change it as appropriate for your linter.
-    return lsp.DiagnosticSeverity.Warning
+def _get_param_location(project_metadata: ProjectMetadata, word: str) -> Optional[Location]:
+    print(f"\nCalled _get_param_location")
+    param = word.split("params:")[-1]
+    parameters_path = project_metadata.project_path / "conf" / "base" / "parameters.yml"
+    # TODO: cache -- we shouldn't have to re-read the file on every request
+    parameters_file = open(parameters_path)
+    param_line_no = None
+    for line_no, line in enumerate(parameters_file, 1):
+        if line.startswith(param):
+            param_line_no = line_no
+            break
+    parameters_file.close()
 
-
-# **********************************************************
-# Linting features end here
-# **********************************************************
-
-# TODO: If your tool is a formatter then update this section.
-# Delete "Formatting features" section if your tool is NOT a
-# formatter.
-# **********************************************************
-# Formatting features start here
-# **********************************************************
-#  Sample implementations:
-#  Black: https://github.com/microsoft/vscode-black-formatter/blob/main/bundled/tool
-
-
-@LSP_SERVER.feature(lsp.TEXT_DOCUMENT_FORMATTING)
-def formatting(params: lsp.DocumentFormattingParams) -> list[lsp.TextEdit] | None:
-    """LSP handler for textDocument/formatting request."""
-    # If your tool is a formatter you can use this handler to provide
-    # formatting support on save. You have to return an array of lsp.TextEdit
-    # objects, to provide your formatted results.
-
-    document = LSP_SERVER.workspace.get_document(params.text_document.uri)
-    edits = _formatting_helper(document)
-    if edits:
-        return edits
-
-    # NOTE: If you provide [] array, VS Code will clear the file of all contents.
-    # To indicate no changes to file return None.
-    return None
-
-
-def _formatting_helper(document: workspace.Document) -> list[lsp.TextEdit] | None:
-    # TODO: For formatting on save support the formatter you use must support
-    # formatting via stdin.
-    # Read, and update_run_tool_on_document and _run_tool functions as needed
-    # for your formatter.
-    result = _run_tool_on_document(document, use_stdin=True)
-    if result.stdout:
-        new_source = _match_line_endings(document, result.stdout)
-        return [
-            lsp.TextEdit(
-                range=lsp.Range(
-                    start=lsp.Position(line=0, character=0),
-                    end=lsp.Position(line=len(document.lines), character=0),
-                ),
-                new_text=new_source,
-            )
-        ]
-    return None
-
-
-def _get_line_endings(lines: list[str]) -> str:
-    """Returns line endings used in the text."""
-    try:
-        if lines[0][-2:] == "\r\n":
-            return "\r\n"
-        return "\n"
-    except Exception:  # pylint: disable=broad-except
-        return None
-
-
-def _match_line_endings(document: workspace.Document, text: str) -> str:
-    """Ensures that the edited text line endings matches the document line endings."""
-    expected = _get_line_endings(document.source.splitlines(keepends=True))
-    actual = _get_line_endings(text.splitlines(keepends=True))
-    if actual == expected or actual is None or expected is None:
-        return text
-    return text.replace(actual, expected)
-
-
-# **********************************************************
-# Formatting features ends here
-# **********************************************************
-
-
-# **********************************************************
-# Required Language Server Initialization and Exit handlers.
-# **********************************************************
-@LSP_SERVER.feature(lsp.INITIALIZE)
-def initialize(params: lsp.InitializeParams) -> None:
-    """LSP handler for initialize request."""
-    log_to_output(f"CWD Server: {os.getcwd()}")
-
-    paths = "\r\n   ".join(sys.path)
-    log_to_output(f"sys.path used to run Server:\r\n   {paths}")
-
-    GLOBAL_SETTINGS.update(**params.initialization_options.get("globalSettings", {}))
-
-    settings = params.initialization_options["settings"]
-    _update_workspace_settings(settings)
-    log_to_output(
-        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
-    )
-    log_to_output(
-        f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
-    )
-
-
-@LSP_SERVER.feature(lsp.EXIT)
-def on_exit(_params: Optional[Any] = None) -> None:
-    """Handle clean up on exit."""
-    jsonrpc.shutdown_json_rpc()
-
-
-@LSP_SERVER.feature(lsp.SHUTDOWN)
-def on_shutdown(_params: Optional[Any] = None) -> None:
-    """Handle clean up on shutdown."""
-    jsonrpc.shutdown_json_rpc()
-
-
-def _get_global_defaults():
-    return {
-        "path": GLOBAL_SETTINGS.get("path", []),
-        "interpreter": GLOBAL_SETTINGS.get("interpreter", [sys.executable]),
-        "args": GLOBAL_SETTINGS.get("args", []),
-        "importStrategy": GLOBAL_SETTINGS.get("importStrategy", "useBundled"),
-        "showNotifications": GLOBAL_SETTINGS.get("showNotifications", "off"),
-    }
-
-
-def _update_workspace_settings(settings):
-    if not settings:
-        key = os.getcwd()
-        WORKSPACE_SETTINGS[key] = {
-            "cwd": key,
-            "workspaceFS": key,
-            "workspace": uris.from_fs_path(key),
-            **_get_global_defaults(),
-        }
+    if param_line_no is None:
         return
 
-    for setting in settings:
-        key = uris.to_fs_path(setting["workspace"])
-        WORKSPACE_SETTINGS[key] = {
-            "cwd": key,
-            **setting,
-            "workspaceFS": key,
-        }
+    location = Location(
+        uri=f"file://{parameters_path}",
+        range=Range(
+            start=Position(line=param_line_no - 1, character=0),
+            end=Position(
+                line=param_line_no,
+                character=0,
+            ),
+        ),
+    )
+    return location
 
 
-def _get_settings_by_path(file_path: pathlib.Path):
-    workspaces = {s["workspaceFS"] for s in WORKSPACE_SETTINGS.values()}
+@SERVER.feature(TEXT_DOCUMENT_DEFINITION)
+def definition(server: KedroLanguageServer, params: TextDocumentPositionParams) -> Optional[List[Location]]:
+    """Support Goto Definition for a dataset or parameter.
+    Currently only support catalog defined in `conf/base`
+    """
+    if not server.is_kedro_project():
+        return None
 
-    while file_path != file_path.parent:
-        str_file_path = str(file_path)
-        if str_file_path in workspaces:
-            return WORKSPACE_SETTINGS[str_file_path]
-        file_path = file_path.parent
+    document = server.workspace.get_text_document(params.text_document.uri)
+    word = _word_at_position(params.position, document)
 
-    setting_values = list(WORKSPACE_SETTINGS.values())
-    return setting_values[0]
+    if word.startswith("params:"):
+        param_location = _get_param_location(server.project_metadata, word)
+        if param_location:
+            return [param_location]
 
+    print("Find Catalog")
+    catalog_paths = get_conf_paths(server.project_metadata)
 
-def _get_document_key(document: workspace.Document):
-    if WORKSPACE_SETTINGS:
-        document_workspace = pathlib.Path(document.path)
-        workspaces = {s["workspaceFS"] for s in WORKSPACE_SETTINGS.values()}
+    for catalog_path in catalog_paths:
+        logger.warn("{catalog_path=}")
+        catalog_conf = yaml.load(catalog_path.read_text(), Loader=SafeLineLoader)
 
-        # Find workspace settings for the given file.
-        while document_workspace != document_workspace.parent:
-            if str(document_workspace) in workspaces:
-                return str(document_workspace)
-            document_workspace = document_workspace.parent
+        if word in catalog_conf:
+            line = catalog_conf[word]["__line__"]
+            location = Location(
+                uri=f"file://{catalog_path}",
+                range=Range(
+                    start=Position(line=line - 1, character=0),
+                    end=Position(
+                        line=line,
+                        character=0,
+                    ),
+                ),
+            )
+            return [location]
 
     return None
+### End of Old kedro-lsp
 
+### Start of YAML template action
+@SERVER.feature(
+    TEXT_DOCUMENT_CODE_ACTION,
+    CodeActionOptions(code_action_kinds=[CodeActionKind.QuickFix]),
+)
+def code_actions(params: CodeActionParams):
+    print("Checkpoint 3: Code Action YAML")
+    items = []
+    document_uri = params.text_document.uri
+    document = SERVER.workspace.get_text_document(document_uri)
 
-def _get_settings_by_document(document: workspace.Document | None):
-    if document is None or document.path is None:
-        return list(WORKSPACE_SETTINGS.values())[0]
+    start_line = params.range.start.line
+    end_line = params.range.end.line
 
-    key = _get_document_key(document)
-    if key is None:
-        # This is either a non-workspace file or there is no workspace.
-        key = os.fspath(pathlib.Path(document.path).parent)
-        return {
-            "cwd": key,
-            "workspaceFS": key,
-            "workspace": uris.from_fs_path(key),
-            **_get_global_defaults(),
-        }
+    lines = document.lines[start_line : end_line + 1]
+    for idx, line in enumerate(lines):
+        match = ADDITION.match(line)
+        if match is not None:
+            range_ = Range(
+                start=Position(line=start_line + idx, character=0),
+                end=Position(line=start_line + idx, character=len(line) - 1),
+            )
 
-    return WORKSPACE_SETTINGS[str(key)]
+            left = int(match.group(1))
+            right = int(match.group(2))
+            answer = left + right
+
+            text_edit = TextEdit(range=range_, new_text=f"{line.strip()} {answer}!")
+
+            action = CodeAction(
+                title=f"Evaluate '{match.group(0)}'",
+                kind=CodeActionKind.QuickFix,
+                edit=WorkspaceEdit(changes={document_uri: [text_edit]}),
+            )
+            items.append(action)
+
+    return items
 
 
 # *****************************************************
