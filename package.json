@@ -1,8 +1,8 @@
 {
-    "name": "kedro-lsp",
-    "displayName": "kedro-lsp",
+    "name": "noklam-vscode",
+    "displayName": "noklam-vscode",
     "description": "Linting support for python files using `kedro-lsp`.",
-    "version": "2022.0.0-dev",
+    "version": "0.0.1",
     "preview": true,
     "serverInfo": {
         "name": "kedro-lsp",
@@ -130,7 +130,12 @@
                 "title": "Restart Server",
                 "category": "kedro-lsp",
                 "command": "kedro-lsp.restart"
-            }
+            },
+            {
+                "command": "pygls.server.executeCommand",
+                "title": "Execute Command",
+                "category": "pygls"
+              }
         ]
     },
     "dependencies": {
