@@ -4,14 +4,12 @@
 from __future__ import annotations
 
 import copy
-import json
 import os
 import pathlib
 import re
 import sys
-import sysconfig
 import traceback
-from typing import Any, Optional, Sequence
+from typing import Optional, Sequence
 
 
 # **********************************************************
@@ -39,7 +37,7 @@ update_sys_path(
 import lsp_jsonrpc as jsonrpc
 import lsp_utils as utils
 import lsprotocol.types as lsp
-from pygls import server, uris, workspace
+from pygls import workspace
 
 WORKSPACE_SETTINGS = {}
 GLOBAL_SETTINGS = {}
@@ -53,43 +51,33 @@ MAX_WORKERS = 5
 # ******************************************************
 import re
 
-from lsprotocol.types import (
-    TEXT_DOCUMENT_CODE_ACTION,
-    TEXT_DOCUMENT_DEFINITION,
-    WORKSPACE_DID_CHANGE_CONFIGURATION,
-    CodeAction,
-    CodeActionKind,
-    CodeActionOptions,
-    CodeActionParams,
-    DidChangeConfigurationParams,
-    InitializeParams,
-    InitializeResult,
-    Location,
-    Position,
-    Range,
-    TextDocumentPositionParams,
-    TextEdit,
-    WorkspaceEdit,
-)
+from lsprotocol.types import (TEXT_DOCUMENT_CODE_ACTION,
+                              TEXT_DOCUMENT_DEFINITION,
+                              WORKSPACE_DID_CHANGE_CONFIGURATION, CodeAction,
+                              CodeActionKind, CodeActionOptions,
+                              CodeActionParams, DidChangeConfigurationParams,
+                              Location,
+                              Position, Range, TextDocumentPositionParams,
+                              TextEdit, WorkspaceEdit)
 from pygls.server import LanguageServer
 from pygls.workspace import Document
 
 """Kedro Language Server."""
+import logging
 import re
 from typing import List, Optional
 
 import yaml
-from pygls.protocol import LanguageServerProtocol
+from kedro.framework.project import configure_project
+from kedro.framework.session import KedroSession
+from kedro.framework.startup import (ProjectMetadata, _get_project_metadata,
+                                     bootstrap_project)
 from pygls.server import LanguageServer
 from yaml.loader import SafeLoader
 
 # Need to stop kedro.framework.project.LOGGING from changing logging settings, otherwise pygls fails with unknown reason.
 
-from kedro.framework.project import configure_project
-from kedro.framework.session import KedroSession
-from kedro.framework.startup import ProjectMetadata, _get_project_metadata, bootstrap_project
 
-import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.debug("DEBUG")
@@ -105,7 +93,7 @@ class KedroLanguageServer(LanguageServer):
     project_metadata: Optional[ProjectMetadata]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        print(f"DEBUG: init KedroLanguageServer")
+        print("DEBUG: init KedroLanguageServer")
         try:
             project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
         except RuntimeError:
@@ -165,7 +153,7 @@ def _word_at_position(position: Position, document: Document) -> str:
     """Get the word under the cursor returning the start and end positions."""
     if position.line >= len(document.lines):
         return ""
-    print(f"\nCalled _word_at_position")
+    print("\nCalled _word_at_position")
     line = document.lines[position.line]
     i = position.character
     # Split word in two
@@ -181,7 +169,7 @@ def _word_at_position(position: Position, document: Document) -> str:
 
 
 def _get_param_location(project_metadata: ProjectMetadata, word: str) -> Optional[Location]:
-    print(f"\nCalled _get_param_location")
+    print("\nCalled _get_param_location")
     param = word.split("params:")[-1]
     parameters_path = project_metadata.project_path / "conf" / "base" / "parameters.yml"
     # TODO: cache -- we shouldn't have to re-read the file on every request
