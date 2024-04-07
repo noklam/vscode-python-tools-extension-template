@@ -4,25 +4,18 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import pathlib
 import re
 import sys
 import traceback
-from typing import Optional, Sequence
-
+from typing import Any, Dict, Optional, Sequence
+from common import update_sys_path
 
 # **********************************************************
 # Update sys.path before importing any bundled libraries.
 # **********************************************************
-def update_sys_path(path_to_add: str, strategy: str) -> None:
-    """Add given path to `sys.path`."""
-    if path_to_add not in sys.path and os.path.isdir(path_to_add):
-        if strategy == "useBundled":
-            sys.path.insert(0, path_to_add)
-        elif strategy == "fromEnvironment":
-            sys.path.append(path_to_add)
-
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
 update_sys_path(
@@ -37,7 +30,8 @@ update_sys_path(
 import lsp_jsonrpc as jsonrpc
 import lsp_utils as utils
 import lsprotocol.types as lsp
-from pygls import workspace
+from pygls import workspace,uris
+
 
 WORKSPACE_SETTINGS = {}
 GLOBAL_SETTINGS = {}
@@ -59,7 +53,7 @@ from lsprotocol.types import (TEXT_DOCUMENT_CODE_ACTION,
                               Location,
                               Position, Range, TextDocumentPositionParams,
                               TextEdit, WorkspaceEdit)
-from pygls.server import LanguageServer
+
 from pygls.workspace import Document
 
 """Kedro Language Server."""
@@ -114,6 +108,76 @@ ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)")
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
 print("Checkpoint 2")
+
+### Settings
+
+GLOBAL_SETTINGS = {}
+WORKSPACE_SETTINGS = {}
+
+@LSP_SERVER.feature(lsp.INITIALIZE)
+async def initialize(params: lsp.InitializeParams) -> None:
+    log_to_output(f"CWD Server: {os.getcwd()}")
+    paths = "\r\n   ".join(sys.path)
+    log_to_output(f"sys.path used to run Server:\r\n   {paths}")
+
+    GLOBAL_SETTINGS.update(**params.initialization_options.get("globalSettings", {}))
+
+    settings = params.initialization_options["settings"]
+    _update_workspace_settings(settings)
+    log_to_output(
+        f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
+    )
+    log_to_output(
+        f"Global settings:\r\n{json.dumps(GLOBAL_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
+    )
+    log_to_output(
+        f"Workspace settings:\r\n{json.dumps(WORKSPACE_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
+    )
+
+
+def _get_global_defaults():
+    return {
+        "path": GLOBAL_SETTINGS.get("path", []),
+        "interpreter": GLOBAL_SETTINGS.get("interpreter", [sys.executable]),
+        "args": GLOBAL_SETTINGS.get("args", []),
+        "importStrategy": GLOBAL_SETTINGS.get("importStrategy", "useBundled"),
+        "showNotifications": GLOBAL_SETTINGS.get("showNotifications", "off"),
+    }
+
+
+def _update_workspace_settings(settings):
+    if not settings:
+        key = os.getcwd()
+        WORKSPACE_SETTINGS[key] = {
+            "cwd": key,
+            "workspaceFS": key,
+            "workspace": uris.from_fs_path(key),
+            **_get_global_defaults(),
+        }
+        return
+
+    for setting in settings:
+        key = uris.to_fs_path(setting["workspace"])
+        WORKSPACE_SETTINGS[key] = {
+            "cwd": key,
+            **setting,
+            "workspaceFS": key,
+        }
+
+
+def get_cwd(settings: Dict[str, Any], document: Optional[workspace.Document]) -> str:
+    """Returns cwd for the given settings and document."""
+    if settings["cwd"] == "${workspaceFolder}":
+        return settings["workspaceFS"]
+
+    if settings["cwd"] == "${fileDirname}":
+        if document is not None:
+            return os.fspath(pathlib.Path(document.path).parent)
+        return settings["workspaceFS"]
+
+    return settings["cwd"]
+
+
 ### From Old kedro-lsp
 def get_conf_paths(project_metadata):
     """
