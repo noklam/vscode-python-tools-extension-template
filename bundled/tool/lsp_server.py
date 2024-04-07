@@ -12,7 +12,6 @@ import sys
 import traceback
 from typing import Any, Dict, Optional, Sequence
 from common import update_sys_path
-
 # **********************************************************
 # Update sys.path before importing any bundled libraries.
 # **********************************************************
@@ -52,7 +51,7 @@ from lsprotocol.types import (TEXT_DOCUMENT_CODE_ACTION,
                               CodeActionParams, DidChangeConfigurationParams,
                               Location,
                               Position, Range, TextDocumentPositionParams,
-                              TextEdit, WorkspaceEdit)
+                              TextEdit, WorkspaceEdit,)
 
 from pygls.workspace import Document
 
@@ -84,24 +83,45 @@ print("Checkpoint 1")
 class KedroLanguageServer(LanguageServer):
     """Store Kedro-specific information in the language server."""
 
-    project_metadata: Optional[ProjectMetadata]
+    project_metadata: Optional[ProjectMetadata] = None
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         print("DEBUG: init KedroLanguageServer")
-        try:
-            project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
-        except RuntimeError:
-            project_metadata = None
-        finally:
-            self.project_metadata = project_metadata
+        # try:
+        #     project_metadata = _get_project_metadata(self.workspace.root_path) # From the LanguageServer
+        #     # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
+        # except RuntimeError:
+        #     project_metadata = None
+        # finally:
+        #     self.project_metadata = project_metadata
     def is_kedro_project(self) -> bool:
         """Returns whether the current workspace is a kedro project."""
         return self.project_metadata is not None
 
+    # def _set_project_metadata(self, root_dir):
+    #     try:
+    #         project_metadata = _get_project_metadata(root_dir) # From the LanguageServer
+    #         # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
+    #     except RuntimeError:
+    #         project_metadata = None
+    #     finally:
+    #         self.project_metadata = project_metadata
 
+    def _set_project_with_workspace(self):
+        if self.project_metadata:
+            return
+        try:
+            project_metadata = _get_project_metadata(self.workspace.root_path) # From the LanguageServer
+            print("checkpoint 4")
+            # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
+        except RuntimeError:
+            project_metadata = None
+        finally:
+            print("checkpoint 5")
+            self.project_metadata = project_metadata
 
-SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
-LSP_SERVER = SERVER
+LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
 
 # server = LanguageServer("nok-kedro-server", "v0.1")
 ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)")
@@ -124,6 +144,7 @@ async def initialize(params: lsp.InitializeParams) -> None:
 
     settings = params.initialization_options["settings"]
     _update_workspace_settings(settings)
+
     log_to_output(
         f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
     )
@@ -178,6 +199,13 @@ def get_cwd(settings: Dict[str, Any], document: Optional[workspace.Document]) ->
     return settings["cwd"]
 
 
+def _check_project():
+    """This was a workaround because the server.workspace.root_path is not available at __init__ time.
+    Ideally there should be some place to inject this logic after client send back the information.
+    For now this function will be triggered for every LSP feature"""
+    LSP_SERVER._set_project_with_workspace()
+
+
 ### From Old kedro-lsp
 def get_conf_paths(project_metadata):
     """
@@ -203,7 +231,7 @@ class SafeLineLoader(SafeLoader):  # pylint: disable=too-many-ancestors
         return mapping
 
 
-@SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
+@LSP_SERVER.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
 def did_change_configuration(
     server: KedroLanguageServer,  # pylint: disable=unused-argument
     params: DidChangeConfigurationParams,  # pylint: disable=unused-argument
@@ -261,11 +289,12 @@ def _get_param_location(project_metadata: ProjectMetadata, word: str) -> Optiona
     return location
 
 
-@SERVER.feature(TEXT_DOCUMENT_DEFINITION)
+@LSP_SERVER.feature(TEXT_DOCUMENT_DEFINITION)
 def definition(server: KedroLanguageServer, params: TextDocumentPositionParams) -> Optional[List[Location]]:
     """Support Goto Definition for a dataset or parameter.
     Currently only support catalog defined in `conf/base`
     """
+    _check_project()
     if not server.is_kedro_project():
         return None
 
@@ -302,7 +331,7 @@ def definition(server: KedroLanguageServer, params: TextDocumentPositionParams) 
 ### End of Old kedro-lsp
 
 ### Start of YAML template action
-@SERVER.feature(
+@LSP_SERVER.feature(
     TEXT_DOCUMENT_CODE_ACTION,
     CodeActionOptions(code_action_kinds=[CodeActionKind.QuickFix]),
 )
@@ -310,7 +339,7 @@ def code_actions(params: CodeActionParams):
     print("Checkpoint 3: Code Action YAML")
     items = []
     document_uri = params.text_document.uri
-    document = SERVER.workspace.get_text_document(document_uri)
+    document = LSP_SERVER.workspace.get_text_document(document_uri)
 
     start_line = params.range.start.line
     end_line = params.range.end.line
