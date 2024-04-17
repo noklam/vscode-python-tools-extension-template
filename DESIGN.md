@@ -3,6 +3,7 @@
   - [Client](#client)
     - [User environment](#user-environment)
 - [todo](#todo)
+      - [Python Interpreter](#python-interpreter)
 
 
 # Overview
@@ -13,6 +14,7 @@ This extension includes two components:
   - [Client](#client)
     - [User environment](#user-environment)
 - [todo](#todo)
+      - [Python Interpreter](#python-interpreter)
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -40,3 +42,7 @@ The extension requires loading a Kedro project instead of just parsing configura
 # todo
 - [] Static validation of `catalog.yml` against a defined JSON schema (planning to experiment with the JSON `kedro` provide and move that to `kedro-datasets` so it can supported different version easily)
 - [] Support references of configuration -> maybe able to support refactor as well.
+
+
+#### Python Interpreter
+- `PythonExtension.api()` returns the interpreter information from `vscode/ms-python`
