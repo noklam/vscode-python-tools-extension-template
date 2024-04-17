@@ -4,6 +4,7 @@
     - [User environment](#user-environment)
 - [todo](#todo)
       - [Python Interpreter](#python-interpreter)
+    - [Logging](#logging)
 
 
 # Overview
@@ -15,6 +16,7 @@ This extension includes two components:
     - [User environment](#user-environment)
 - [todo](#todo)
       - [Python Interpreter](#python-interpreter)
+    - [Logging](#logging)
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -46,3 +48,7 @@ The extension requires loading a Kedro project instead of just parsing configura
 
 #### Python Interpreter
 - `PythonExtension.api()` returns the interpreter information from `vscode/ms-python`
+
+
+### Logging
+- `lsp_runner.py` controls the traceback that get sent back into output channel (VS Code)
