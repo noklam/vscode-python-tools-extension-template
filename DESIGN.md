@@ -6,6 +6,7 @@
       - [Python Interpreter](#python-interpreter)
     - [Logging](#logging)
     - [Workspace settings](#workspace-settings)
+    - [lsp\_server.py](#lsp_serverpy)
 
 
 # Overview
@@ -19,6 +20,7 @@ This extension includes two components:
       - [Python Interpreter](#python-interpreter)
     - [Logging](#logging)
     - [Workspace settings](#workspace-settings)
+    - [lsp\_server.py](#lsp_serverpy)
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -74,3 +76,6 @@ You will find this in `package.json`
                     "type": "array"
                 }
 ```
+
+### lsp_server.py
+- `_check_project()` is a workaround to check the workspace path at the beginning of every LSP function. Ideally it should be VScode client passing this before KedroLanguageServer get init. It should be done in `initialise` but for some reason it doesn't work.
