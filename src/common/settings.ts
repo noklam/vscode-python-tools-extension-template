@@ -103,8 +103,8 @@ export async function getGlobalSettings(namespace: string, includeInterpreter?: 
 
 export function checkIfConfigurationChanged(e: ConfigurationChangeEvent, namespace: string): boolean {
     const settings = [
-        `${namespace}.args`,
-        `${namespace}.path`,
+        // `${namespace}.args`,
+        // `${namespace}.path`,
         `${namespace}.interpreter`,
         `${namespace}.importStrategy`,
         `${namespace}.showNotifications`,
