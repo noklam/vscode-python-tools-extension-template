@@ -112,10 +112,19 @@ class KedroLanguageServer(LanguageServer):
             project_metadata = _get_project_metadata(
                 self.workspace.root_path
             )  # From the LanguageServer
+            session = KedroSession.create(project_metadata.package_name)
+            context = session.load_context()
+            config_loader = context.config_loader
+            return config_loader
         except RuntimeError:
             project_metadata = None
+            context = None
+            config_loader =None
         finally:
             self.project_metadata = project_metadata
+            self.context = context
+            self.config_loader = config_loader
+
 
 
 LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
@@ -205,7 +214,7 @@ def get_conf_paths(project_metadata):
     Get conf paths using the default kedro patterns, and the CONF_ROOT
     directory set in the projects settings.py
     """
-    bootstrap_project(project_metadata.project_path)
+    # bootstrap_project(project_metadata.project_path)
     # todo: Is there a way to not load the Kedro Session?
     session = KedroSession.create(project_metadata.package_name)
     context = session.load_context()
