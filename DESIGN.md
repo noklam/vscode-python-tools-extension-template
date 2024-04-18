@@ -41,7 +41,7 @@ The extension requires loading a Kedro project instead of just parsing configura
 - To support project settings defined in `settings.py`
 - To support environment resolution. i.e. user can have `base`, `local`, `prod`. The extension need to know which environment the user is using in order to resolve properly.
 
-
+todo: On the other hand, it's a heavy requirement for LSP to load a kedro project, this may also trigger connections with hooks etc and it should be avoided.
 
 # todo
 - [] Static validation of `catalog.yml` against a defined JSON schema (planning to experiment with the JSON `kedro` provide and move that to `kedro-datasets` so it can supported different version easily)

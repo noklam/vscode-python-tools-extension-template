@@ -99,27 +99,11 @@ class KedroLanguageServer(LanguageServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        print("DEBUG: init KedroLanguageServer")
-        # try:
-        #     project_metadata = _get_project_metadata(self.workspace.root_path) # From the LanguageServer
-        #     # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
-        # except RuntimeError:
-        #     project_metadata = None
-        # finally:
-        #     self.project_metadata = project_metadata
-
     def is_kedro_project(self) -> bool:
         """Returns whether the current workspace is a kedro project."""
         return self.project_metadata is not None
 
-    # def _set_project_metadata(self, root_dir):
-    #     try:
-    #         project_metadata = _get_project_metadata(root_dir) # From the LanguageServer
-    #         # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
-    #     except RuntimeError:
-    #         project_metadata = None
-    #     finally:
-    #         self.project_metadata = project_metadata
+
 
     def _set_project_with_workspace(self):
         if self.project_metadata:
@@ -128,25 +112,19 @@ class KedroLanguageServer(LanguageServer):
             project_metadata = _get_project_metadata(
                 self.workspace.root_path
             )  # From the LanguageServer
-            print("checkpoint 4")
-            # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
         except RuntimeError:
             project_metadata = None
         finally:
-            print("checkpoint 5")
             self.project_metadata = project_metadata
 
 
 LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
-
-# server = LanguageServer("nok-kedro-server", "v0.1")
-ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)")
+ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)") # todo: remove this when mature
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
 print("Checkpoint 2")
 
 ### Settings
-
 GLOBAL_SETTINGS = {}
 WORKSPACE_SETTINGS = {}
 
@@ -156,9 +134,7 @@ async def initialize(params: lsp.InitializeParams) -> None:
     log_to_output(f"CWD Server: {os.getcwd()}")
     paths = "\r\n   ".join(sys.path)
     log_to_output(f"sys.path used to run Server:\r\n   {paths}")
-
     GLOBAL_SETTINGS.update(**params.initialization_options.get("globalSettings", {}))
-
     settings = params.initialization_options["settings"]
     _update_workspace_settings(settings)
 
@@ -223,14 +199,14 @@ def _check_project():
     LSP_SERVER._set_project_with_workspace()
 
 
-### From Old kedro-lsp
+### Kedro LSP logic
 def get_conf_paths(project_metadata):
     """
     Get conf paths using the default kedro patterns, and the CONF_ROOT
     directory set in the projects settings.py
     """
     bootstrap_project(project_metadata.project_path)
-    configure_project(project_metadata.package_name)
+    # todo: Is there a way to not load the Kedro Session?
     session = KedroSession.create(project_metadata.package_name)
     context = session.load_context()
     # pats = ("catalog*", "catalog*/**", "**/catalog*")
