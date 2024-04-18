@@ -10,11 +10,13 @@ import pathlib
 import re
 import sys
 import traceback
+import logging
 from typing import Any, Dict, Optional, Sequence
 from common import update_sys_path
 # **********************************************************
 # Update sys.path before importing any bundled libraries.
 # **********************************************************
+logger = logging.getLogger(__name__)
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
 before_update_path = sys.path.copy()
@@ -23,6 +25,9 @@ update_sys_path(
     os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
 )
 after_update_path = sys.path.copy()
+
+logger.warn(f"{before_update_path=}")
+logger.warn(f"{after_update_path=}")
 # **********************************************************
 # Imports needed for the language server goes below this.
 # **********************************************************
@@ -65,7 +70,7 @@ from lsprotocol.types import (
 from pygls.workspace import Document
 
 """Kedro Language Server."""
-import logging
+
 import re
 from typing import List, Optional
 
@@ -83,10 +88,7 @@ from yaml.loader import SafeLoader
 # Need to stop kedro.framework.project.LOGGING from changing logging settings, otherwise pygls fails with unknown reason.
 
 
-logger = logging.getLogger(__name__)
 print("Checkpoint 1")
-logger.warn(f"{before_update_path=}")
-logger.warn(f"{after_update_path=}")
 
 
 class KedroLanguageServer(LanguageServer):
