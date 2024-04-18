@@ -17,11 +17,12 @@ from common import update_sys_path
 # **********************************************************
 
 # Ensure that we can import LSP libraries, and other bundled libraries.
+before_update_path = sys.path.copy()
 update_sys_path(
     os.fspath(pathlib.Path(__file__).parent.parent / "libs"),
     os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
 )
-
+after_update_path = sys.path.copy()
 # **********************************************************
 # Imports needed for the language server goes below this.
 # **********************************************************
@@ -29,7 +30,7 @@ update_sys_path(
 import lsp_jsonrpc as jsonrpc
 import lsp_utils as utils
 import lsprotocol.types as lsp
-from pygls import workspace,uris
+from pygls import workspace, uris
 
 
 WORKSPACE_SETTINGS = {}
@@ -44,14 +45,22 @@ MAX_WORKERS = 5
 # ******************************************************
 import re
 
-from lsprotocol.types import (TEXT_DOCUMENT_CODE_ACTION,
-                              TEXT_DOCUMENT_DEFINITION,
-                              WORKSPACE_DID_CHANGE_CONFIGURATION, CodeAction,
-                              CodeActionKind, CodeActionOptions,
-                              CodeActionParams, DidChangeConfigurationParams,
-                              Location,
-                              Position, Range, TextDocumentPositionParams,
-                              TextEdit, WorkspaceEdit,)
+from lsprotocol.types import (
+    TEXT_DOCUMENT_CODE_ACTION,
+    TEXT_DOCUMENT_DEFINITION,
+    WORKSPACE_DID_CHANGE_CONFIGURATION,
+    CodeAction,
+    CodeActionKind,
+    CodeActionOptions,
+    CodeActionParams,
+    DidChangeConfigurationParams,
+    Location,
+    Position,
+    Range,
+    TextDocumentPositionParams,
+    TextEdit,
+    WorkspaceEdit,
+)
 
 from pygls.workspace import Document
 
@@ -63,8 +72,11 @@ from typing import List, Optional
 import yaml
 from kedro.framework.project import configure_project
 from kedro.framework.session import KedroSession
-from kedro.framework.startup import (ProjectMetadata, _get_project_metadata,
-                                     bootstrap_project)
+from kedro.framework.startup import (
+    ProjectMetadata,
+    _get_project_metadata,
+    bootstrap_project,
+)
 from pygls.server import LanguageServer
 from yaml.loader import SafeLoader
 
@@ -72,18 +84,16 @@ from yaml.loader import SafeLoader
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.debug("DEBUG")
-logger.info("INFO")
-logger.warn("WARN")
 print("Checkpoint 1")
-
+logger.warn(f"{before_update_path=}")
+logger.warn(f"{after_update_path=}")
 
 
 class KedroLanguageServer(LanguageServer):
     """Store Kedro-specific information in the language server."""
 
     project_metadata: Optional[ProjectMetadata] = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -95,6 +105,7 @@ class KedroLanguageServer(LanguageServer):
         #     project_metadata = None
         # finally:
         #     self.project_metadata = project_metadata
+
     def is_kedro_project(self) -> bool:
         """Returns whether the current workspace is a kedro project."""
         return self.project_metadata is not None
@@ -112,7 +123,9 @@ class KedroLanguageServer(LanguageServer):
         if self.project_metadata:
             return
         try:
-            project_metadata = _get_project_metadata(self.workspace.root_path) # From the LanguageServer
+            project_metadata = _get_project_metadata(
+                self.workspace.root_path
+            )  # From the LanguageServer
             print("checkpoint 4")
             # project_metadata = _get_project_metadata("/Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project") # hardcode
         except RuntimeError:
@@ -120,6 +133,7 @@ class KedroLanguageServer(LanguageServer):
         finally:
             print("checkpoint 5")
             self.project_metadata = project_metadata
+
 
 LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
 
@@ -133,6 +147,7 @@ print("Checkpoint 2")
 
 GLOBAL_SETTINGS = {}
 WORKSPACE_SETTINGS = {}
+
 
 @LSP_SERVER.feature(lsp.INITIALIZE)
 async def initialize(params: lsp.InitializeParams) -> None:
@@ -260,7 +275,9 @@ def _word_at_position(position: Position, document: Document) -> str:
     return m_start[0] + m_end[-1]
 
 
-def _get_param_location(project_metadata: ProjectMetadata, word: str) -> Optional[Location]:
+def _get_param_location(
+    project_metadata: ProjectMetadata, word: str
+) -> Optional[Location]:
     print("\nCalled _get_param_location")
     param = word.split("params:")[-1]
     parameters_path = project_metadata.project_path / "conf" / "base" / "parameters.yml"
@@ -290,7 +307,9 @@ def _get_param_location(project_metadata: ProjectMetadata, word: str) -> Optiona
 
 
 @LSP_SERVER.feature(TEXT_DOCUMENT_DEFINITION)
-def definition(server: KedroLanguageServer, params: TextDocumentPositionParams) -> Optional[List[Location]]:
+def definition(
+    server: KedroLanguageServer, params: TextDocumentPositionParams
+) -> Optional[List[Location]]:
     """Support Goto Definition for a dataset or parameter.
     Currently only support catalog defined in `conf/base`
     """
@@ -328,7 +347,10 @@ def definition(server: KedroLanguageServer, params: TextDocumentPositionParams) 
             return [location]
 
     return None
+
+
 ### End of Old kedro-lsp
+
 
 ### Start of YAML template action
 @LSP_SERVER.feature(
