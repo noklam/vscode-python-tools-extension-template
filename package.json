@@ -2,7 +2,7 @@
     "name": "noklam-vscode",
     "displayName": "noklam-vscode",
     "description": "Linting support for python files using `kedro-lsp`.",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "preview": true,
     "serverInfo": {
         "name": "kedro-lsp",
@@ -64,24 +64,7 @@
     "contributes": {
         "configuration": {
             "properties": {
-                "kedro-lsp.args": {
-                    "default": [],
-                    "description": "Arguments passed in. Each argument is a separate item in the array.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "scope": "resource",
-                    "type": "array"
-                },
-                "kedro-lsp.path": {
-                    "default": [],
-                    "description": "When set to a path to kedro-lsp binary, extension will use that. NOTE: Using this option may slowdown server response time.",
-                    "scope": "resource",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                },
+
                 "kedro-lsp.importStrategy": {
                     "default": "useBundled",
                     "description": "Defines where `kedro-lsp` is imported from. This setting may be ignored if `kedro-lsp.path` is set.",

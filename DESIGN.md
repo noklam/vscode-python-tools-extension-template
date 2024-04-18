@@ -5,6 +5,7 @@
 - [todo](#todo)
       - [Python Interpreter](#python-interpreter)
     - [Logging](#logging)
+    - [Workspace settings](#workspace-settings)
 
 
 # Overview
@@ -17,6 +18,7 @@ This extension includes two components:
 - [todo](#todo)
       - [Python Interpreter](#python-interpreter)
     - [Logging](#logging)
+    - [Workspace settings](#workspace-settings)
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -52,3 +54,23 @@ The extension requires loading a Kedro project instead of just parsing configura
 
 ### Logging
 - `lsp_runner.py` controls the traceback that get sent back into output channel (VS Code)
+
+
+### Workspace settings
+The settings is defined in `package.json` and some extra logic in `src/common/settings.ts`.
+
+For example, user can update the Python interpreter path to have a global settings.
+
+You will find this in `package.json`
+
+```json
+                "kedro-lsp.interpreter": {
+                    "default": [],
+                    "description": "When set to a path to python executable, extension will use that to launch the server and any subprocess.",
+                    "scope": "resource",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+```
