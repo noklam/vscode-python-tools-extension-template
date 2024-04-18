@@ -109,10 +109,12 @@ class KedroLanguageServer(LanguageServer):
         if self.project_metadata:
             return
         try:
-            project_metadata = _get_project_metadata(
-                self.workspace.root_path
-            )  # From the LanguageServer
-            session = KedroSession.create(project_metadata.package_name)
+            root_path = pathlib.Path(self.workspace.root_path) # From language server
+            # project_metadata = _get_project_metadata(
+            #     self.workspace.root_path
+            # )  # From the LanguageServer
+            project_metadata = bootstrap_project(root_path)
+            session = KedroSession.create(root_path)
             context = session.load_context()
             config_loader = context.config_loader
             return config_loader
@@ -211,16 +213,9 @@ def _check_project():
 ### Kedro LSP logic
 def get_conf_paths(project_metadata):
     """
-    Get conf paths using the default kedro patterns, and the CONF_ROOT
-    directory set in the projects settings.py
+    Get conf paths
     """
-    # bootstrap_project(project_metadata.project_path)
-    # todo: Is there a way to not load the Kedro Session?
-    session = KedroSession.create(project_metadata.package_name)
-    context = session.load_context()
-    # pats = ("catalog*", "catalog*/**", "**/catalog*")
-    # config_loader = context.config_loader._lookup_config_filepaths(Path(context.config_loader.conf_paths[0]), pats, set())
-    config_loader = context.config_loader
+    config_loader = LSP_SERVER.config_loader
     return config_loader
 
 
@@ -267,6 +262,7 @@ def _get_param_location(
 ) -> Optional[Location]:
     print("\nCalled _get_param_location")
     param = word.split("params:")[-1]
+    log_to_output(f"Attempt to search `{param}` from parameters file")
     parameters_path = project_metadata.project_path / "conf" / "base" / "parameters.yml"
     # TODO: cache -- we shouldn't have to re-read the file on every request
     parameters_file = open(parameters_path)
@@ -307,14 +303,17 @@ def definition(
     document = server.workspace.get_text_document(params.text_document.uri)
     word = _word_at_position(params.position, document)
 
+    log_to_output(f"Query keyword: {word}")
+
     if word.startswith("params:"):
         param_location = _get_param_location(server.project_metadata, word)
         if param_location:
+            logger.warning(f"{param_location=}")
             return [param_location]
 
     print("Find Catalog")
     catalog_paths = get_conf_paths(server.project_metadata)
-
+    log_to_output(f"Attempt to search `{word}` from catalog")
     for catalog_path in catalog_paths:
         logger.warn("{catalog_path=}")
         catalog_conf = yaml.load(catalog_path.read_text(), Loader=SafeLineLoader)
@@ -331,6 +330,7 @@ def definition(
                     ),
                 ),
             )
+            logger.warning(f"{location=}")
             return [location]
 
     return None
