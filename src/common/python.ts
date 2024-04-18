@@ -11,6 +11,7 @@ export interface IInterpreterDetails {
     resource?: Uri;
 }
 
+
 const onDidChangePythonInterpreterEvent = new EventEmitter<IInterpreterDetails>();
 export const onDidChangePythonInterpreter: Event<IInterpreterDetails> = onDidChangePythonInterpreterEvent.event;
 

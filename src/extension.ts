@@ -59,6 +59,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         const interpreterDetails = await getInterpreterDetails();
+        console.log('===============DEBUG============');
+        console.log(interpreterDetails);
+        console.log('===============DEBUG============');
         if (interpreterDetails.path) {
             traceVerbose(`Using interpreter from Python extension: ${interpreterDetails.path.join(' ')}`);
             lsClient = await restartServer(serverId, serverName, outputChannel, lsClient);
@@ -91,6 +94,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const interpreter = getInterpreterFromSetting(serverId);
         if (interpreter === undefined || interpreter.length === 0) {
             traceLog(`Python extension loading`);
+            traceLog(`Python Interpreter: ${interpreter}`);
             await initializePython(context.subscriptions);
             traceLog(`Python extension loaded`);
         } else {
