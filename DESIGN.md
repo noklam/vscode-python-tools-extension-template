@@ -48,7 +48,7 @@ todo: On the other hand, it's a heavy requirement for LSP to load a kedro projec
 # todo
 - [] Static validation of `catalog.yml` against a defined JSON schema (planning to experiment with the JSON `kedro` provide and move that to `kedro-datasets` so it can supported different version easily)
 - [] Support references of configuration -> maybe able to support refactor as well.
-
+- [] `get_conf_paths` requires some extra inspection feature from `OmegaConfigloader` which doesn't exist yet.
 
 #### Python Interpreter
 - `PythonExtension.api()` returns the interpreter information from `vscode/ms-python`
