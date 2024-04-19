@@ -1,8 +1,8 @@
 {
     "name": "noklam-vscode",
     "displayName": "noklam-vscode",
-    "description": "Linting support for python files using `kedro-lsp`.",
-    "version": "0.0.3",
+    "description": "A Kedro VSCode Extension.",
+    "version": "0.0.4",
     "preview": true,
     "serverInfo": {
         "name": "kedro-lsp",
