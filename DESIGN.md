@@ -3,10 +3,8 @@
   - [Client](#client)
     - [User environment](#user-environment)
 - [todo](#todo)
-      - [Python Interpreter](#python-interpreter)
-    - [Logging](#logging)
-    - [Workspace settings](#workspace-settings)
     - [lsp\_server.py](#lsp_serverpy)
+- [Questions](#questions)
 
 
 # Overview
@@ -17,10 +15,8 @@ This extension includes two components:
   - [Client](#client)
     - [User environment](#user-environment)
 - [todo](#todo)
-      - [Python Interpreter](#python-interpreter)
-    - [Logging](#logging)
-    - [Workspace settings](#workspace-settings)
     - [lsp\_server.py](#lsp_serverpy)
+- [Questions](#questions)
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -49,6 +45,10 @@ todo: On the other hand, it's a heavy requirement for LSP to load a kedro projec
 - [] Static validation of `catalog.yml` against a defined JSON schema (planning to experiment with the JSON `kedro` provide and move that to `kedro-datasets` so it can supported different version easily)
 - [] Support references of configuration -> maybe able to support refactor as well.
 - [] `get_conf_paths` requires some extra inspection feature from `OmegaConfigloader` which doesn't exist yet.
+
+```python
+config["a"]["b"].source
+>> {file: "abc.yml", line: 10, col: 4}
 
 #### Python Interpreter
 - `PythonExtension.api()` returns the interpreter information from `vscode/ms-python`
@@ -79,3 +79,7 @@ You will find this in `package.json`
 
 ### lsp_server.py
 - `_check_project()` is a workaround to check the workspace path at the beginning of every LSP function. Ideally it should be VScode client passing this before KedroLanguageServer get init. It should be done in `initialise` but for some reason it doesn't work.
+
+
+# Questions
+- Should it navigate to a resolved version (for read) or to the raw source code (for editing)? The former is easier to implement.
