@@ -64,7 +64,12 @@
     "contributes": {
         "configuration": {
             "properties": {
-
+                "yaml.schemas": {
+                    "default": {
+                        "https://raw.githubusercontent.com/kedro-org/kedro/develop/static/jsonschema/kedro-catalog-0.19.json": "conf/**/*catalog*"
+                    },
+                    "description": "Nok test"
+                },
                 "kedro-lsp.importStrategy": {
                     "default": "useBundled",
                     "description": "Defines where `kedro-lsp` is imported from. This setting may be ignored if `kedro-lsp.path` is set.",
@@ -118,7 +123,7 @@
                 "command": "pygls.server.executeCommand",
                 "title": "Execute Command",
                 "category": "pygls"
-              }
+            }
         ]
     },
     "dependencies": {
