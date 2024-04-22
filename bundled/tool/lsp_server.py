@@ -12,7 +12,10 @@ import sys
 import traceback
 import logging
 from typing import Any, Dict, Optional, Sequence
+
+from kedro.config import OmegaConfigLoader
 from common import update_sys_path
+from pathlib import Path
 # **********************************************************
 # Update sys.path before importing any bundled libraries.
 # **********************************************************
@@ -116,7 +119,7 @@ class KedroLanguageServer(LanguageServer):
             project_metadata = bootstrap_project(root_path)
             session = KedroSession.create(root_path)
             context = session.load_context()
-            config_loader = context.config_loader
+            config_loader: OmegaConfigLoader = context.config_loader
             return config_loader
         except RuntimeError:
             project_metadata = None
@@ -215,8 +218,18 @@ def get_conf_paths(project_metadata):
     """
     Get conf paths
     """
-    config_loader = LSP_SERVER.config_loader
-    return config_loader
+    config_loader: OmegaConfigLoader = LSP_SERVER.config_loader
+    patterns = config_loader.config_patterns.get("catalog", [])
+    base_path = str(Path(config_loader.conf_source) / config_loader.base_env)
+
+    # Extract from OmegaConfigLoader source code
+    paths = []
+    for pattern in patterns:
+        for each in config_loader._fs.glob(Path(f"{str(base_path)}/{pattern}").as_posix()):
+            if not config_loader._is_hidden(each):
+                paths.append(Path(each))
+    paths = set(paths)
+    return paths
 
 
 class SafeLineLoader(SafeLoader):  # pylint: disable=too-many-ancestors
@@ -314,8 +327,9 @@ def definition(
     print("Find Catalog")
     catalog_paths = get_conf_paths(server.project_metadata)
     log_to_output(f"Attempt to search `{word}` from catalog")
+    log_to_output(f"{catalog_paths}")
     for catalog_path in catalog_paths:
-        logger.warn("{catalog_path=}")
+        log_to_output("{catalog_path=}")
         catalog_conf = yaml.load(catalog_path.read_text(), Loader=SafeLineLoader)
 
         if word in catalog_conf:
