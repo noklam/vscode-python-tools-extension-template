@@ -231,6 +231,23 @@ def get_conf_paths(project_metadata):
     paths = set(paths)
     return paths
 
+def get_params_paths(project_metadata):
+    """
+    Get conf paths
+    """
+    config_loader: OmegaConfigLoader = LSP_SERVER.config_loader
+    patterns = config_loader.config_patterns.get("parameters", [])
+    base_path = str(Path(config_loader.conf_source) / config_loader.base_env)
+
+    # Extract from OmegaConfigLoader source code
+    paths = []
+    for pattern in patterns:
+        for each in config_loader._fs.glob(Path(f"{str(base_path)}/{pattern}").as_posix()):
+            if not config_loader._is_hidden(each):
+                paths.append(Path(each))
+    paths = set(paths)
+    return paths
+
 
 class SafeLineLoader(SafeLoader):  # pylint: disable=too-many-ancestors
     """A YAML loader that annotates loaded nodes with line number."""
@@ -276,31 +293,33 @@ def _get_param_location(
     print("\nCalled _get_param_location")
     param = word.split("params:")[-1]
     log_to_output(f"Attempt to search `{param}` from parameters file")
-    parameters_path = project_metadata.project_path / "conf" / "base" / "parameters.yml"
+
     # TODO: cache -- we shouldn't have to re-read the file on every request
-    parameters_file = open(parameters_path)
+    params_paths = get_params_paths(project_metadata)
     param_line_no = None
-    for line_no, line in enumerate(parameters_file, 1):
-        if line.startswith(param):
-            param_line_no = line_no
-            break
-    parameters_file.close()
+
+    for parameters_file in params_paths:
+        with open(parameters_file) as f:
+            for line_no, line in enumerate(f, 1):
+                if line.startswith(param):
+                    param_line_no = line_no
+                    break
+        if param_line_no is None:
+            continue
+        location = Location(
+            uri=f"file://{parameters_file.resolve().as_posix()}",
+            range=Range(
+                start=Position(line=param_line_no - 1, character=0),
+                end=Position(
+                    line=param_line_no,
+                    character=0,
+                ),
+            ),
+        )
+        return location
 
     if param_line_no is None:
         return
-
-    location = Location(
-        uri=f"file://{parameters_path}",
-        range=Range(
-            start=Position(line=param_line_no - 1, character=0),
-            end=Position(
-                line=param_line_no,
-                character=0,
-            ),
-        ),
-    )
-    return location
-
 
 @LSP_SERVER.feature(TEXT_DOCUMENT_DEFINITION)
 def definition(
