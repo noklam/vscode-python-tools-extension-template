@@ -56,6 +56,8 @@ import re
 from lsprotocol.types import (
     TEXT_DOCUMENT_CODE_ACTION,
     TEXT_DOCUMENT_DEFINITION,
+    TEXT_DOCUMENT_REFERENCES,
+    TEXT_DOCUMENT_COMPLETION,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     CodeAction,
     CodeActionKind,
@@ -368,8 +370,21 @@ def definition(
 
     return None
 
+@LSP_SERVER.feature(TEXT_DOCUMENT_REFERENCES)
+def reference(
+    server: KedroLanguageServer, params: TextDocumentPositionParams
+) -> Optional[List[Location]]:
+    ...
 
+@LSP_SERVER.feature(TEXT_DOCUMENT_COMPLETION)
+def completion():
+    """Placeholder
+        i.e. params:  (completion)
+        i.e. pipelines (completion)
+        may actually just load it from DataCatalog
+    """
 ### End of Old kedro-lsp
+
 
 
 ### Start of YAML template action
