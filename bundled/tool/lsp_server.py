@@ -63,6 +63,10 @@ from lsprotocol.types import (
     CodeActionKind,
     CodeActionOptions,
     CodeActionParams,
+    CompletionOptions,
+    CompletionParams,
+    CompletionList,
+    CompletionItem,
     DidChangeConfigurationParams,
     Location,
     Position,
@@ -70,6 +74,7 @@ from lsprotocol.types import (
     TextDocumentPositionParams,
     TextEdit,
     WorkspaceEdit,
+
 )
 
 from pygls.workspace import Document
@@ -308,6 +313,10 @@ def _get_param_location(
                     break
         if param_line_no is None:
             continue
+
+
+
+
         location = Location(
             uri=f"file://{parameters_file.resolve().as_posix()}",
             range=Range(
@@ -371,18 +380,66 @@ def definition(
     return None
 
 @LSP_SERVER.feature(TEXT_DOCUMENT_REFERENCES)
-def reference(
+def references(
     server: KedroLanguageServer, params: TextDocumentPositionParams
 ) -> Optional[List[Location]]:
-    ...
+    """Obtain all references to text."""
+    # document = server.workspace.get_text_document(params.text_document.uri)
+    # jedi_script = jedi_utils.script(server.project, document)
+    # jedi_lines = jedi_utils.line_column(params.position)
+    # names = jedi_script.get_references(*jedi_lines)
+    # locations = [
+        # location
+        # for location in (jedi_utils.lsp_location(name) for name in names)
+        # if location is not None
+    # ]
+    dummy_locations = [
+            Location(
+            uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
+            range=Range(
+                start=Position(line=3, character=0),
+                end=Position(
+                    line=4,
+                    character=0,
+                ),
+            ),
+        ),
+        Location(
+            uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
+            range=Range(
+                start=Position(line=5, character=0),
+                end=Position(
+                    line=6,
+                    character=0,
+                ),
+            ),
+        )
+    ]
 
-@LSP_SERVER.feature(TEXT_DOCUMENT_COMPLETION)
-def completion():
+    # dummy_locations=None
+    locations = dummy_locations
+    return locations if locations else None
+
+
+
+@LSP_SERVER.feature(TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=[':']))
+def completions( params: CompletionParams):
     """Placeholder
         i.e. params:  (completion)
         i.e. pipelines (completion)
         may actually just load it from DataCatalog
     """
+    log_to_output("Completion")
+    ...
+    return CompletionList(
+        is_incomplete=False,
+        items=[
+            CompletionItem(label='model_options'),
+            CompletionItem(label='train_test_split_ratio'),
+            CompletionItem(label='learning_rate'),
+        ]
+    )
+
 ### End of Old kedro-lsp
 
 
