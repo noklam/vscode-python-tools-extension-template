@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional, Sequence
 from kedro.config import OmegaConfigLoader
 from common import update_sys_path
 from pathlib import Path
+
 # **********************************************************
 # Update sys.path before importing any bundled libraries.
 # **********************************************************
@@ -74,7 +75,6 @@ from lsprotocol.types import (
     TextDocumentPositionParams,
     TextEdit,
     WorkspaceEdit,
-
 )
 
 from pygls.workspace import Document
@@ -85,20 +85,66 @@ import re
 from typing import List, Optional
 
 import yaml
-from kedro.framework.project import configure_project
 from kedro.framework.session import KedroSession
 from kedro.framework.startup import (
     ProjectMetadata,
-    _get_project_metadata,
     bootstrap_project,
 )
 from pygls.server import LanguageServer
 from yaml.loader import SafeLoader
+from kedro.io.data_catalog import DataCatalog
 
 # Need to stop kedro.framework.project.LOGGING from changing logging settings, otherwise pygls fails with unknown reason.
 
 
 print("Checkpoint 1")
+
+
+class DummyDataCatalog(DataCatalog):
+    """Only host the config of the DataCatalog but not actually loading the dataset class"""
+
+    def __init__(self, conf_catalog, feed_dict):
+        datasets = {}
+        self.conf_catalog = conf_catalog
+        self._params = feed_dict
+
+        for ds_name, ds_config in conf_catalog.items():
+            datasets[ds_name] = ds_config
+
+        super().__init__(datasets=datasets)
+
+    @property
+    def params(self):
+        return self._params
+
+    def _get_feed_dict(self) -> dict[str, Any]:
+        """Get parameters and return the feed dictionary."""
+        params = self.params
+        feed_dict = {"parameters": params}
+
+        def _add_param_to_feed_dict(param_name: str, param_value: Any) -> None:
+            """This recursively adds parameter paths to the `feed_dict`,
+            whenever `param_value` is a dictionary itself, so that users can
+            specify specific nested parameters in their node inputs.
+
+            Example:
+
+                >>> param_name = "a"
+                >>> param_value = {"b": 1}
+                >>> _add_param_to_feed_dict(param_name, param_value)
+                >>> assert feed_dict["params:a"] == {"b": 1}
+                >>> assert feed_dict["params:a.b"] == 1
+            """
+            key = f"params:{param_name}"
+            feed_dict[key] = param_value
+            if isinstance(param_value, dict):
+                for key, val in param_value.items():
+                    _add_param_to_feed_dict(f"{param_name}.{key}", val)
+
+        for param_name, param_value in params.items():
+            _add_param_to_feed_dict(param_name, param_value)
+
+        return feed_dict
 
 
 class KedroLanguageServer(LanguageServer):
@@ -113,13 +159,11 @@ class KedroLanguageServer(LanguageServer):
         """Returns whether the current workspace is a kedro project."""
         return self.project_metadata is not None
 
-
-
     def _set_project_with_workspace(self):
         if self.project_metadata:
             return
         try:
-            root_path = pathlib.Path(self.workspace.root_path) # From language server
+            root_path = pathlib.Path(self.workspace.root_path)  # From language server
             # project_metadata = _get_project_metadata(
             #     self.workspace.root_path
             # )  # From the LanguageServer
@@ -131,18 +175,34 @@ class KedroLanguageServer(LanguageServer):
         except RuntimeError:
             project_metadata = None
             context = None
-            config_loader =None
+            config_loader = None
         finally:
             self.project_metadata = project_metadata
             self.context = context
             self.config_loader = config_loader
+            self.dummy_catalog = self._get_dummy_catalog()
 
+    def _get_dummy_catalog(self):
+        # '**/catalog*' reads modular pipeline configs
+        conf_catalog = self.config_loader["catalog"]
+        params = self.config_loader["parameters"]
+        catalog: DummyDataCatalog = DummyDataCatalog(
+            conf_catalog=conf_catalog, feed_dict=params
+        )
+        feed_dict = catalog._get_feed_dict()
+        catalog.add_feed_dict(feed_dict)
+        return catalog
 
 
 LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
-ADDITION = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)") # todo: remove this when mature
+ADDITION = re.compile(
+    r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)"
+)  # todo: remove this when mature
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
+# Without the : for YML config
+RE_REF_START_WORD = re.compile("[A-Za-z_0-9]:*$")
+RE_REF_END_WORD = re.compile("^[A-Za-z_0-9]:*")
 print("Checkpoint 2")
 
 ### Settings
@@ -232,11 +292,14 @@ def get_conf_paths(project_metadata):
     # Extract from OmegaConfigLoader source code
     paths = []
     for pattern in patterns:
-        for each in config_loader._fs.glob(Path(f"{str(base_path)}/{pattern}").as_posix()):
+        for each in config_loader._fs.glob(
+            Path(f"{str(base_path)}/{pattern}").as_posix()
+        ):
             if not config_loader._is_hidden(each):
                 paths.append(Path(each))
     paths = set(paths)
     return paths
+
 
 def get_params_paths(project_metadata):
     """
@@ -249,7 +312,9 @@ def get_params_paths(project_metadata):
     # Extract from OmegaConfigLoader source code
     paths = []
     for pattern in patterns:
-        for each in config_loader._fs.glob(Path(f"{str(base_path)}/{pattern}").as_posix()):
+        for each in config_loader._fs.glob(
+            Path(f"{str(base_path)}/{pattern}").as_posix()
+        ):
             if not config_loader._is_hidden(each):
                 paths.append(Path(each))
     paths = set(paths)
@@ -294,6 +359,25 @@ def _word_at_position(position: Position, document: Document) -> str:
     return m_start[0] + m_end[-1]
 
 
+def _word_at_position_for_reference(position: Position, document: Document) -> str:
+    """Get the word under the cursor returning the start and end positions."""
+    if position.line >= len(document.lines):
+        return ""
+    print("\nCalled _word_at_position_for_reference")
+    line = document.lines[position.line]
+    i = position.character
+    # Split word in two
+    start = line[:i]
+    end = line[i:]
+
+    # Take end of start and start of end to find word
+    # These are guaranteed to match, even if they match the empty string
+    m_start = RE_REF_START_WORD.findall(start)
+    m_end = RE_REF_END_WORD.findall(end)
+
+    return m_start[0] + m_end[-1]
+
+
 def _get_param_location(
     project_metadata: ProjectMetadata, word: str
 ) -> Optional[Location]:
@@ -314,9 +398,6 @@ def _get_param_location(
         if param_line_no is None:
             continue
 
-
-
-
         location = Location(
             uri=f"file://{parameters_file.resolve().as_posix()}",
             range=Range(
@@ -331,6 +412,7 @@ def _get_param_location(
 
     if param_line_no is None:
         return
+
 
 @LSP_SERVER.feature(TEXT_DOCUMENT_DEFINITION)
 def definition(
@@ -379,69 +461,125 @@ def definition(
 
     return None
 
+
+def reference_location(path, line):
+    location = Location(
+        uri=f"file://{path.resolve().as_posix()}",
+        range=Range(
+            start=Position(line=line, character=0),
+            end=Position(
+                line=line + 1,
+                character=0,
+            ),
+        ),
+    )
+    return location
+
+
 @LSP_SERVER.feature(TEXT_DOCUMENT_REFERENCES)
 def references(
     server: KedroLanguageServer, params: TextDocumentPositionParams
 ) -> Optional[List[Location]]:
     """Obtain all references to text."""
-    # document = server.workspace.get_text_document(params.text_document.uri)
-    # jedi_script = jedi_utils.script(server.project, document)
-    # jedi_lines = jedi_utils.line_column(params.position)
-    # names = jedi_script.get_references(*jedi_lines)
-    # locations = [
-        # location
-        # for location in (jedi_utils.lsp_location(name) for name in names)
-        # if location is not None
+    _check_project()
+    if not server.is_kedro_project():
+        return None
+
+    document = server.workspace.get_text_document(params.text_document.uri)
+    word = _word_at_position_for_reference(params.position, document)
+
+    # dummy_locations = [
+    #         Location(
+    #         uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
+    #         range=Range(
+    #             start=Position(line=3, character=0),
+    #             end=Position(
+    #                 line=4,
+    #                 character=0,
+    #             ),
+    #         ),
+    #     ),
+    #     Location(
+    #         uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
+    #         range=Range(
+    #             start=Position(line=5, character=0),
+    #             end=Position(
+    #                 line=6,
+    #                 character=0,
+    #             ),
+    #         ),
+    #     )
     # ]
-    dummy_locations = [
-            Location(
-            uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
-            range=Range(
-                start=Position(line=3, character=0),
-                end=Position(
-                    line=4,
-                    character=0,
-                ),
-            ),
-        ),
-        Location(
-            uri=f"file://Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project/conf/base/parameters.yml",
-            range=Range(
-                start=Position(line=5, character=0),
-                end=Position(
-                    line=6,
-                    character=0,
-                ),
-            ),
-        )
-    ]
+    # return dummy_locations
 
     # dummy_locations=None
-    locations = dummy_locations
+    # locations = dummy_locations
+
+    log_to_output(f"Query Reference keyword: {word}")
+    word = word.strip(":")
+    import importlib_resources
+    from kedro.framework.project import PACKAGE_NAME
+
+    # Find pipelines module
+    importlib_resources.files(f"{PACKAGE_NAME}.pipelines")
+
+    pipelines_package = importlib_resources.files(f"{PACKAGE_NAME}.pipelines")
+
+    # Iterate on pipeplines/<pipeline_name>/pipeline.py
+    result = []
+    for pipeline_dir in pipelines_package.iterdir():
+        if not pipeline_dir.is_dir():
+            continue
+        pipeline_file = pipeline_dir / "pipeline.py"
+        if not pipeline_file.exists():
+            continue
+
+        # Read the line number and match keywords naively
+        with open(pipeline_file) as f:
+            for i, line in enumerate(f):
+                if word in line:
+                    result.append((pipeline_file, i))
+
+    locations = []
+    if result:
+        for ref in result:
+            locations.append(reference_location(ref[0], ref[1]))
+
     return locations if locations else None
 
 
-
-@LSP_SERVER.feature(TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=[':']))
-def completions( params: CompletionParams):
+@LSP_SERVER.feature(
+    TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=['"'])
+)
+def completions(server: KedroLanguageServer, params: CompletionParams):
     """Placeholder
-        i.e. params:  (completion)
-        i.e. pipelines (completion)
-        may actually just load it from DataCatalog
+    i.e. params:  (completion)
+    i.e. pipelines (completion)
+    may actually just load it from DataCatalog
     """
+    _check_project()
+    if not server.is_kedro_project():
+        return None
     log_to_output("Completion")
     ...
+    server.dummy_catalog
+
+    completion_items = []
+    for item in server.dummy_catalog.list():
+        completion_items.append(CompletionItem(label=item))
+
     return CompletionList(
         is_incomplete=False,
-        items=[
-            CompletionItem(label='model_options'),
-            CompletionItem(label='train_test_split_ratio'),
-            CompletionItem(label='learning_rate'),
-        ]
+        items=completion_items,
+        # items=[
+        #     CompletionItem(label='model_options'),
+        #     CompletionItem(label='train_test_split_ratio'),
+        #     CompletionItem(label='learning_rate'),
+        # ]
     )
 
-### End of Old kedro-lsp
 
+### End of Old kedro-lsp
 
 
 ### Start of YAML template action
