@@ -23,6 +23,9 @@ The LSP server is implemented in Python and the code is in `bundled`.
 
 The most important logic is in `lsp_server.py`, the rest of the file is boilerplate code to allow the LSP communicate with the client properly (not the interesting bit).
 
+notes:
+- `editor.gotoLocation.alternativeDefinitionCommand` to define ctrl+click behavior
+
 ## Client
 The client is implemented in `src`, and the most important part is in `extension.ts`.
 
@@ -79,7 +82,7 @@ You will find this in `package.json`
 
 ### lsp_server.py
 - `_check_project()` is a workaround to check the workspace path at the beginning of every LSP function. Ideally it should be VScode client passing this before KedroLanguageServer get init. It should be done in `initialise` but for some reason it doesn't work.
-
+- ctrl + click on config should go to current location to trigger `editor.gotoLocation.alternativeDefinitionCommand`
 
 # Questions
 - Should it navigate to a resolved version (for read) or to the raw source code (for editing)? The former is easier to implement.

@@ -463,6 +463,7 @@ def definition(
 
 
 def reference_location(path, line):
+
     location = Location(
         uri=f"file://{path.resolve().as_posix()}",
         range=Range(
@@ -473,6 +474,7 @@ def reference_location(path, line):
             ),
         ),
     )
+    log_to_output(f"{location=}")
     return location
 
 
