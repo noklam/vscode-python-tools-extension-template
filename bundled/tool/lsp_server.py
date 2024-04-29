@@ -201,8 +201,8 @@ ADDITION = re.compile(
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
 # Without the : for YML config
-RE_REF_START_WORD = re.compile("[A-Za-z_0-9]:*$")
-RE_REF_END_WORD = re.compile("^[A-Za-z_0-9]:*")
+RE_REF_START_WORD = re.compile("([A-Za-z_0-9]*):")
+
 print("Checkpoint 2")
 
 ### Settings
@@ -366,16 +366,16 @@ def _word_at_position_for_reference(position: Position, document: Document) -> s
     print("\nCalled _word_at_position_for_reference")
     line = document.lines[position.line]
     i = position.character
-    # Split word in two
-    start = line[:i]
-    end = line[i:]
+    # # Split word in two
+    # start = line[:i]
+    # end = line[i:]
 
     # Take end of start and start of end to find word
     # These are guaranteed to match, even if they match the empty string
-    m_start = RE_REF_START_WORD.findall(start)
-    m_end = RE_REF_END_WORD.findall(end)
+    keys = RE_REF_START_WORD.findall(line)
 
-    return m_start[0] + m_end[-1]
+
+    return keys[0]
 
 
 def _get_param_location(
