@@ -1,6 +1,8 @@
 - [Overview](#overview)
+- [Supported Feature](#supported-feature)
   - [Backend LSP Server](#backend-lsp-server)
   - [Client](#client)
+    - [Dataset YAML schema validation](#dataset-yaml-schema-validation)
     - [User environment](#user-environment)
 - [todo](#todo)
     - [lsp\_server.py](#lsp_serverpy)
@@ -11,12 +13,21 @@
 
 This extension includes two components:
 - [Overview](#overview)
+- [Supported Feature](#supported-feature)
   - [Backend LSP Server](#backend-lsp-server)
   - [Client](#client)
+    - [Dataset YAML schema validation](#dataset-yaml-schema-validation)
     - [User environment](#user-environment)
 - [todo](#todo)
     - [lsp\_server.py](#lsp_serverpy)
 - [Questions](#questions)
+
+# Supported Feature
+- Cmd + Click (pipeline.py -> catalog.yml or parameters.yml)
+- "Reference" from parameters.yml or catalog.yml -> pipeline.py
+- Autocompletion (incomplete)
+- schema validation via YAML extension
+
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -34,6 +45,9 @@ The client is implemented in `src`, and the most important part is in `extension
 2. `package.json`
 
 The extension bundles a few Python libraries such as `pygls` (Python Language Server Protocol implementation). It also relies on `vscode/ms-python` extension to select the proper Python intepreter.
+### Dataset YAML schema validation
+- via the Redhat YAML extension packaged through the contribution point in `package.json` as `yaml.schemas`.
+- Alternatively, can use the `YamlValidation` contribution points
 
 ### User environment
 The extension requires loading a Kedro project instead of just parsing configurations for few reasons:
