@@ -2,11 +2,11 @@
     "name": "noklam-vscode",
     "displayName": "noklam-vscode",
     "description": "A Kedro VSCode Extension.",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "preview": true,
     "serverInfo": {
-        "name": "kedro-lsp",
-        "module": "kedro-lsp"
+        "name": "Kedro",
+        "module": "kedro extension"
     },
     "publisher": "noklam",
     "license": "MIT",
