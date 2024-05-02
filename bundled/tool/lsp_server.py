@@ -350,23 +350,6 @@ def did_change_configuration(
     Currently does nothing, but necessary for pygls.
     """
 
-def _word_at_position(position: Position, document: Document) -> str:
-    """Get the word under the cursor returning the start and end positions."""
-    if position.line >= len(document.lines):
-        return ""
-    print("\nCalled _word_at_position")
-    line = document.lines[position.line]
-    i = position.character
-    # Split word in two
-    start = line[:i]
-    end = line[i:]
-
-    # Take end of start and start of end to find word
-    # These are guaranteed to match, even if they match the empty string
-    m_start = RE_START_WORD.findall(start)
-    m_end = RE_END_WORD.findall(end)
-
-    return m_start[0] + m_end[-1]
 
 
 
@@ -418,7 +401,6 @@ def definition(
         return None
 
     document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
-    word = _word_at_position(params.position, document)
     word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
     log_to_output(f"Query keyword: {word}")
@@ -481,7 +463,6 @@ def references(
         return None
 
     document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
-    word = _word_at_position_for_reference(params.position, document)
     word = document.word_at_position(params.position)
 
     # dummy_locations = [
