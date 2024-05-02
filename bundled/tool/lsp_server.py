@@ -77,7 +77,7 @@ from lsprotocol.types import (
     WorkspaceEdit,
 )
 
-from pygls.workspace import Document
+from pygls.workspace import TextDocument, Document
 
 """Kedro Language Server."""
 
@@ -95,9 +95,6 @@ from yaml.loader import SafeLoader
 from kedro.io.data_catalog import DataCatalog
 
 # Need to stop kedro.framework.project.LOGGING from changing logging settings, otherwise pygls fails with unknown reason.
-
-
-print("Checkpoint 1")
 
 
 class DummyDataCatalog(DataCatalog):
@@ -200,10 +197,9 @@ ADDITION = re.compile(
 )  # todo: remove this when mature
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
+
 # Without the : for YML config
 RE_REF_START_WORD = re.compile("([A-Za-z_0-9]*):")
-
-print("Checkpoint 2")
 
 ### Settings
 GLOBAL_SETTINGS = {}
@@ -228,6 +224,7 @@ async def initialize(params: lsp.InitializeParams) -> None:
     log_to_output(
         f"Workspace settings:\r\n{json.dumps(WORKSPACE_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
     )
+    _check_project()
 
 
 def _get_global_defaults():
@@ -283,7 +280,14 @@ def _check_project():
 ### Kedro LSP logic
 def get_conf_paths(project_metadata):
     """
-    Get conf paths
+    Get the configuration paths of data catalog based on the project metadata.
+
+    Args:
+        project_metadata: The metadata of the project.
+
+    Returns:
+        A set of configuration paths.
+
     """
     config_loader: OmegaConfigLoader = LSP_SERVER.config_loader
     patterns = config_loader.config_patterns.get("catalog", [])
@@ -303,7 +307,14 @@ def get_conf_paths(project_metadata):
 
 def get_params_paths(project_metadata):
     """
-    Get conf paths
+    Get the configuration paths of parameters based on the project metadata.
+
+    Args:
+        project_metadata: The metadata of the project.
+
+    Returns:
+        A set of configuration paths.
+
     """
     config_loader: OmegaConfigLoader = LSP_SERVER.config_loader
     patterns = config_loader.config_patterns.get("parameters", [])
@@ -338,7 +349,6 @@ def did_change_configuration(
     """Implement event for workspace/didChangeConfiguration.
     Currently does nothing, but necessary for pygls.
     """
-
 
 def _word_at_position(position: Position, document: Document) -> str:
     """Get the word under the cursor returning the start and end positions."""
@@ -425,8 +435,9 @@ def definition(
     if not server.is_kedro_project():
         return None
 
-    document = server.workspace.get_text_document(params.text_document.uri)
+    document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
     word = _word_at_position(params.position, document)
+    word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
     log_to_output(f"Query keyword: {word}")
 
@@ -487,8 +498,9 @@ def references(
     if not server.is_kedro_project():
         return None
 
-    document = server.workspace.get_text_document(params.text_document.uri)
+    document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
     word = _word_at_position_for_reference(params.position, document)
+    word = document.word_at_position(params.position)
 
     # dummy_locations = [
     #         Location(
@@ -595,32 +607,7 @@ def code_actions(params: CodeActionParams):
     document_uri = params.text_document.uri
     document = LSP_SERVER.workspace.get_text_document(document_uri)
 
-    start_line = params.range.start.line
-    end_line = params.range.end.line
-
-    lines = document.lines[start_line : end_line + 1]
-    for idx, line in enumerate(lines):
-        match = ADDITION.match(line)
-        if match is not None:
-            range_ = Range(
-                start=Position(line=start_line + idx, character=0),
-                end=Position(line=start_line + idx, character=len(line) - 1),
-            )
-
-            left = int(match.group(1))
-            right = int(match.group(2))
-            answer = left + right
-
-            text_edit = TextEdit(range=range_, new_text=f"{line.strip()} {answer}!")
-
-            action = CodeAction(
-                title=f"Evaluate '{match.group(0)}'",
-                kind=CodeActionKind.QuickFix,
-                edit=WorkspaceEdit(changes={document_uri: [text_edit]}),
-            )
-            items.append(action)
-
-    return items
+    return None
 
 
 # *****************************************************
