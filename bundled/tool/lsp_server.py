@@ -192,8 +192,8 @@ LSP_SERVER = KedroLanguageServer("pygls-kedro-example", "v0.1")
 ADDITION = re.compile(
     r"^\s*(\d+)\s*\+\s*(\d+)\s*=(?=\s*$)"
 )  # todo: remove this when mature
-RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
-RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
+RE_START_WORD = re.compile("[A-Za-z_0-9:\.]*$")
+RE_END_WORD = re.compile("^[A-Za-z_0-9:\.]*")
 
 ### Settings
 GLOBAL_SETTINGS = {}
@@ -348,7 +348,11 @@ def did_change_configuration(
 def _get_param_location(
     project_metadata: ProjectMetadata, word: str
 ) -> Optional[Location]:
-    param = word.split("params:")[-1]
+    words = word.split("params:")
+    if len(words)>1:
+        param = words[0] # Top key
+    else:
+        return None
     log_to_output(f"Attempt to search `{param}` from parameters file")
 
     # TODO: cache -- we shouldn't have to re-read the file on every request
@@ -405,7 +409,9 @@ def definition(
             return [param_location]
 
     catalog_paths = get_conf_paths(server.project_metadata)
-    log_to_output(f"Attempt to search `{word}` from catalog")
+
+    catalog_word = document.word_at_position(params.position)
+    log_to_output(f"Attempt to search `{catalog_word}` from catalog")
     log_to_output(f"{catalog_paths}")
     for catalog_path in catalog_paths:
         log_to_output("{catalog_path=}")
