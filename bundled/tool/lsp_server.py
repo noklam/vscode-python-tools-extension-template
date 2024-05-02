@@ -369,24 +369,6 @@ def _word_at_position(position: Position, document: Document) -> str:
     return m_start[0] + m_end[-1]
 
 
-def _word_at_position_for_reference(position: Position, document: Document) -> str:
-    """Get the word under the cursor returning the start and end positions."""
-    if position.line >= len(document.lines):
-        return ""
-    print("\nCalled _word_at_position_for_reference")
-    line = document.lines[position.line]
-    i = position.character
-    # # Split word in two
-    # start = line[:i]
-    # end = line[i:]
-
-    # Take end of start and start of end to find word
-    # These are guaranteed to match, even if they match the empty string
-    keys = RE_REF_START_WORD.findall(line)
-
-
-    return keys[0]
-
 
 def _get_param_location(
     project_metadata: ProjectMetadata, word: str
