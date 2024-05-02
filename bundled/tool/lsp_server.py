@@ -348,7 +348,6 @@ def did_change_configuration(
 def _get_param_location(
     project_metadata: ProjectMetadata, word: str
 ) -> Optional[Location]:
-    print("\nCalled _get_param_location")
     param = word.split("params:")[-1]
     log_to_output(f"Attempt to search `{param}` from parameters file")
 
@@ -397,7 +396,7 @@ def definition(
     )
     word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
-    log_to_output(f"Query keyword: {word}")
+    log_to_output(f"Query keyword for params: {word}")
 
     if word.startswith("params:"):
         param_location = _get_param_location(server.project_metadata, word)
@@ -405,7 +404,6 @@ def definition(
             logger.warning(f"{param_location=}")
             return [param_location]
 
-    print("Find Catalog")
     catalog_paths = get_conf_paths(server.project_metadata)
     log_to_output(f"Attempt to search `{word}` from catalog")
     log_to_output(f"{catalog_paths}")
@@ -560,7 +558,7 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
     CodeActionOptions(code_action_kinds=[CodeActionKind.QuickFix]),
 )
 def code_actions(params: CodeActionParams):
-    print("Checkpoint 3: Code Action YAML")
+    log_to_output("Trigger Code Action")
     document_uri = params.text_document.uri
     LSP_SERVER.workspace.get_text_document(document_uri)
 
