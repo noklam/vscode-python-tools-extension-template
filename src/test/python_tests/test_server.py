@@ -17,12 +17,15 @@ from pytest_lsp import (
 
 @pytest_lsp.fixture(
     config=ClientServerConfig(
-        server_command=[sys.executable, "/Users/Nok_Lam_Chan/dev/vscode-python-tools-extension-template/bundled/tool/lsp_server.py"],
+        server_command=[
+            sys.executable,
+            "/Users/Nok_Lam_Chan/dev/vscode-python-tools-extension-template/bundled/tool/lsp_server.py",
+        ],
     ),
 )
 async def client(lsp_client: LanguageClient):
     # Setup
-    response = await lsp_client.initialize_session(
+    await lsp_client.initialize_session(
         InitializeParams(
             capabilities=client_capabilities("visual-studio-code"),
             root_uri="file:///Users/Nok_Lam_Chan/dev/pygls/examples/servers/old_kedro_project",
@@ -33,6 +36,7 @@ async def client(lsp_client: LanguageClient):
 
     # Teardown
     await lsp_client.shutdown_session()
+
 
 @pytest.mark.asyncio
 async def test_completion(client: LanguageClient):
@@ -47,7 +51,10 @@ async def test_completion(client: LanguageClient):
 
     assert len(result.items) > 0
 
-@pytest.mark.xfail(reason="This should fail but currently autocompletion is trigger for every file")
+
+@pytest.mark.xfail(
+    reason="This should fail but currently autocompletion is trigger for every file"
+)
 @pytest.mark.asyncio
 async def test_completion_fail(client: LanguageClient):
     result = await client.text_document_completion_async(
@@ -60,4 +67,3 @@ async def test_completion_fail(client: LanguageClient):
     )
 
     assert len(result.items) < 1
-
