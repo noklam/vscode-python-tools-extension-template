@@ -60,7 +60,6 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_REFERENCES,
     TEXT_DOCUMENT_COMPLETION,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
-    CodeAction,
     CodeActionKind,
     CodeActionOptions,
     CodeActionParams,
@@ -73,11 +72,9 @@ from lsprotocol.types import (
     Position,
     Range,
     TextDocumentPositionParams,
-    TextEdit,
-    WorkspaceEdit,
 )
 
-from pygls.workspace import TextDocument, Document
+from pygls.workspace import TextDocument
 
 """Kedro Language Server."""
 
@@ -197,9 +194,6 @@ ADDITION = re.compile(
 )  # todo: remove this when mature
 RE_START_WORD = re.compile("[A-Za-z_0-9:]*$")
 RE_END_WORD = re.compile("^[A-Za-z_0-9:]*")
-
-# Without the : for YML config
-RE_REF_START_WORD = re.compile("([A-Za-z_0-9]*):")
 
 ### Settings
 GLOBAL_SETTINGS = {}
@@ -351,8 +345,6 @@ def did_change_configuration(
     """
 
 
-
-
 def _get_param_location(
     project_metadata: ProjectMetadata, word: str
 ) -> Optional[Location]:
@@ -400,7 +392,9 @@ def definition(
     if not server.is_kedro_project():
         return None
 
-    document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
+    document: TextDocument = server.workspace.get_text_document(
+        params.text_document.uri
+    )
     word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
     log_to_output(f"Query keyword: {word}")
@@ -438,7 +432,6 @@ def definition(
 
 
 def reference_location(path, line):
-
     location = Location(
         uri=f"file://{path.resolve().as_posix()}",
         range=Range(
@@ -462,7 +455,9 @@ def references(
     if not server.is_kedro_project():
         return None
 
-    document: TextDocument = server.workspace.get_text_document(params.text_document.uri)
+    document: TextDocument = server.workspace.get_text_document(
+        params.text_document.uri
+    )
     word = document.word_at_position(params.position)
 
     # dummy_locations = [
@@ -566,9 +561,8 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
 )
 def code_actions(params: CodeActionParams):
     print("Checkpoint 3: Code Action YAML")
-    items = []
     document_uri = params.text_document.uri
-    document = LSP_SERVER.workspace.get_text_document(document_uri)
+    LSP_SERVER.workspace.get_text_document(document_uri)
 
     return None
 
