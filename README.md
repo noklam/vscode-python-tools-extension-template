@@ -20,3 +20,4 @@ Type `"` in the editor and it should trigger the autocompletion list.
 ![autocompletion](assets/lsp-autocompletion.gif)
 
 ## Schema Validation
+![schema valiadtion](assets/lsp-schema-validation.gif)
