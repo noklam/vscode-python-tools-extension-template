@@ -1,5 +1,6 @@
 - [Overview](#overview)
 - [Supported Feature](#supported-feature)
+- [Completion Provider](#completion-provider)
   - [Backend LSP Server](#backend-lsp-server)
   - [Client](#client)
     - [Dataset YAML schema validation](#dataset-yaml-schema-validation)
@@ -14,6 +15,7 @@
 This extension includes two components:
 - [Overview](#overview)
 - [Supported Feature](#supported-feature)
+- [Completion Provider](#completion-provider)
   - [Backend LSP Server](#backend-lsp-server)
   - [Client](#client)
     - [Dataset YAML schema validation](#dataset-yaml-schema-validation)
@@ -28,6 +30,7 @@ This extension includes two components:
 - Autocompletion (incomplete)
 - schema validation via YAML extension
 
+# Completion Provider
 
 ## Backend LSP Server
 The LSP server is implemented in Python and the code is in `bundled`.
@@ -48,6 +51,7 @@ The extension bundles a few Python libraries such as `pygls` (Python Language Se
 ### Dataset YAML schema validation
 - via the Redhat YAML extension packaged through the contribution point in `package.json` as `yaml.schemas`.
 - Alternatively, can use the `YamlValidation` contribution points
+- https://github.com/Lona/vscode-github-actions/blob/master/src/yaml-support/yaml-schema.ts look at how other extension works
 
 ### User environment
 The extension requires loading a Kedro project instead of just parsing configurations for few reasons:
