@@ -2,7 +2,7 @@
     "name": "noklam-vscode",
     "displayName": "noklam-vscode",
     "description": "A Kedro VSCode Extension.",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "preview": true,
     "serverInfo": {
         "name": "Kedro",

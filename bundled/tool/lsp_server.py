@@ -77,6 +77,9 @@ from lsprotocol.types import (
 from pygls.workspace import TextDocument
 
 """Kedro Language Server."""
+# todo: we should either investigate why logging interact with lsp or find a better way.
+import os
+os.environ["KEDRO_LOGGING_CONFIG"] = str(Path(__file__).parent / "dummy_logging.yml")
 
 import re
 from typing import List, Optional
