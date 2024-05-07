@@ -94,6 +94,14 @@
                     },
                     "type": "array"
                 },
+                "kedro.isExperimental": {
+                    "default": "yes",
+                    "description": "Enable experimental features like autocompletion.",
+                    "enum": [
+                        "yes",
+                        "no"
+                    ]
+                },
                 "kedro.showNotifications": {
                     "default": "off",
                     "description": "Controls when notifications are shown by this extension.",

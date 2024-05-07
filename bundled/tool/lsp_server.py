@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 """Implementation of tool support over LSP."""
+
 from __future__ import annotations
 
 import copy
@@ -52,17 +53,12 @@ MAX_WORKERS = 5
 # ******************************************************
 # Kedro LSP Server.
 # ******************************************************
-import re
 
 from lsprotocol.types import (
-    TEXT_DOCUMENT_CODE_ACTION,
     TEXT_DOCUMENT_DEFINITION,
     TEXT_DOCUMENT_REFERENCES,
     TEXT_DOCUMENT_COMPLETION,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
-    CodeActionKind,
-    CodeActionOptions,
-    CodeActionParams,
     CompletionOptions,
     CompletionParams,
     CompletionList,
@@ -79,10 +75,10 @@ from pygls.workspace import TextDocument
 """Kedro Language Server."""
 # todo: we should either investigate why logging interact with lsp or find a better way.
 import os
+
 os.environ["KEDRO_LOGGING_CONFIG"] = str(Path(__file__).parent / "dummy_logging.yml")
 
-import re
-from typing import List, Optional
+from typing import List
 
 import yaml
 from kedro.framework.session import KedroSession
@@ -201,6 +197,7 @@ RE_END_WORD = re.compile("^[A-Za-z_0-9:\.]*")
 ### Settings
 GLOBAL_SETTINGS = {}
 WORKSPACE_SETTINGS = {}
+IS_EXPERIMENTAL = "yes"
 
 
 @LSP_SERVER.feature(lsp.INITIALIZE)
@@ -212,6 +209,11 @@ async def initialize(params: lsp.InitializeParams) -> None:
     settings = params.initialization_options["settings"]
     _update_workspace_settings(settings)
 
+    # Read the first workspace only in case there are multiples of them.
+    workspace_settings = next(iter(WORKSPACE_SETTINGS.values()))
+    if not workspace_settings.get("isExperimental") == "yes":
+        IS_EXPERIMENTAL = workspace_settings.get("isExperimental")
+
     log_to_output(
         f"Settings used to run Server:\r\n{json.dumps(settings, indent=4, ensure_ascii=False)}\r\n"
     )
@@ -221,6 +223,8 @@ async def initialize(params: lsp.InitializeParams) -> None:
     log_to_output(
         f"Workspace settings:\r\n{json.dumps(WORKSPACE_SETTINGS, indent=4, ensure_ascii=False)}\r\n"
     )
+    log_for_lsp_debug("DEBUG*")
+
     _check_project()
 
 
@@ -352,8 +356,8 @@ def _get_param_location(
     project_metadata: ProjectMetadata, word: str
 ) -> Optional[Location]:
     words = word.split("params:")
-    if len(words)>1:
-        param = words[0] # Top key
+    if len(words) > 1:
+        param = words[0]  # Top key
     else:
         return None
     log_to_output(f"Attempt to search `{param}` from parameters file")
@@ -403,21 +407,21 @@ def definition(
     )
     word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
-    logger.warning(f"Query keyword for params: {word}")
+    log_for_lsp_debug(f"Query keyword for params: {word}")
 
     if word.startswith("params:"):
         param_location = _get_param_location(server.project_metadata, word)
         if param_location:
-            logger.warning(f"{param_location=}")
+            log_for_lsp_debug(f"{param_location=}")
             return [param_location]
 
     catalog_paths = get_conf_paths(server.project_metadata)
 
     catalog_word = document.word_at_position(params.position)
-    logger.warning(f"Attempt to search `{catalog_word}` from catalog")
-    logger.warning(f"{catalog_paths=}")
+    log_for_lsp_debug(f"Attempt to search `{catalog_word}` from catalog")
+    log_for_lsp_debug(f"{catalog_paths=}")
     for catalog_path in catalog_paths:
-        logger.warning("    {catalog_path=}")
+        log_for_lsp_debug(f"    {catalog_path=}")
         catalog_conf = yaml.load(catalog_path.read_text(), Loader=SafeLineLoader)
 
         if word in catalog_conf:
@@ -432,7 +436,7 @@ def definition(
                     ),
                 ),
             )
-            logger.warning(f"{location=}")
+            log_for_lsp_debug(f"{location=}")
             return [location]
 
     # pos = params.position
@@ -443,8 +447,8 @@ def definition(
     # )
     uri = params.text_document.uri
     pos = params.position
-    curr_pos =  Position(line= pos.line, character=pos.character)
-    return Location(uri = uri, range =  Range(start=curr_pos, end=curr_pos))
+    curr_pos = Position(line=pos.line, character=pos.character)
+    return Location(uri=uri, range=Range(start=curr_pos, end=curr_pos))
     # return params
     # return None
 
@@ -460,7 +464,7 @@ def reference_location(path, line):
             ),
         ),
     )
-    logger.warning(f"{location=}")
+    log_for_lsp_debug(f"{location=}")
     return location
 
 
@@ -505,7 +509,7 @@ def references(
     # dummy_locations=None
     # locations = dummy_locations
 
-    logger.warning(f"Query Reference keyword: {word}")
+    log_for_lsp_debug(f"Query Reference keyword: {word}")
     word = word.strip(":")
     import importlib_resources
     from kedro.framework.project import PACKAGE_NAME
@@ -538,6 +542,14 @@ def references(
     return locations if locations else None
 
 
+def log_for_lsp_debug(msg: str):
+    """The log_to_output is too verbose for now, once the LSP is stable these log should
+    be removed. Default level set as warning otherwise user cannot see the log and report
+    back easily without touching configuration.
+    """
+    logger.warning(f"Kedro LSP: {msg}")
+
+
 @LSP_SERVER.feature(
     TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=['"'])
 )
@@ -548,9 +560,12 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
     may actually just load it from DataCatalog
     """
     _check_project()
+    # Experimental feature that only enabled if the flag is on.
+    if not IS_EXPERIMENTAL:
+        return None
     if not server.is_kedro_project():
         return None
-    logger.warning("Completion")
+    log_for_lsp_debug("Completion")
     ...
     server.dummy_catalog
 
