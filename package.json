@@ -30,9 +30,7 @@
         "vscode": "^1.78.0"
     },
     "categories": [
-        "Programming Languages",
-        "Linters",
-        "Formatters"
+        "Programming Languages"
     ],
     "extensionDependencies": [
         "ms-python.python",
@@ -46,6 +44,7 @@
     },
     "activationEvents": [
         "onLanguage:python",
+        "onLanguage:yaml",
         "workspaceContains:*.py"
     ],
     "main": "./dist/extension.js",
