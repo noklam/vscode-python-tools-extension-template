@@ -81,6 +81,7 @@ os.environ["KEDRO_LOGGING_CONFIG"] = str(Path(__file__).parent / "dummy_logging.
 from typing import List
 
 import yaml
+from kedro.framework.hooks.manager import _NullPluginManager
 from kedro.framework.session import KedroSession
 from kedro.framework.startup import (
     ProjectMetadata,
@@ -162,6 +163,10 @@ class KedroLanguageServer(LanguageServer):
             # )  # From the LanguageServer
             project_metadata = bootstrap_project(root_path)
             session = KedroSession.create(root_path)
+            # todo: less hacky way to override session hook manager
+            # avoid initialise spark hooks etc
+            session._hook_manager = _NullPluginManager()
+
             context = session.load_context()
             config_loader: OmegaConfigLoader = context.config_loader
             return config_loader
