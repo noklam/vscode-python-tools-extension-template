@@ -1,2 +1,1 @@
-inputs=["params:a.b.c.d", "params:a", "catalog","parameters"]
-
+inputs = ["params:a.b.c.d", "params:a", "catalog", "parameters"]

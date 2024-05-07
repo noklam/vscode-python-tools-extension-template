@@ -7,7 +7,6 @@ from lsprotocol.types import (
     InitializeParams,
     Position,
     TextDocumentIdentifier,
-    TextDocumentPositionParams
 )
 from pygls.workspace import TextDocument
 from pytest_lsp import (
@@ -76,10 +75,11 @@ def test_definition(client):
     td = TextDocument(f"file://{path}")
 
     import re
+
     RE_START_WORD = re.compile("[A-Za-z_0-9\.:]*$")
     RE_END_WORD = re.compile("^[A-Za-z_0-9\.:]*")
 
-    pos = Position(0,17) # "a" at "params:a.b.c."
-    print(td.word_at_position(pos, RE_START_WORD,RE_END_WORD))
+    pos = Position(0, 17)  # "a" at "params:a.b.c."
+    print(td.word_at_position(pos, RE_START_WORD, RE_END_WORD))
     print(td.word_at_position(pos))
     assert False
