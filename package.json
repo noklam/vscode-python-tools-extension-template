@@ -2,7 +2,7 @@
     "name": "noklam-vscode",
     "displayName": "noklam-vscode",
     "description": "A Kedro VSCode Extension.",
-    "version": "0.0.12",
+    "version": "0.0.13",
     "preview": true,
     "serverInfo": {
         "name": "Kedro",
@@ -15,6 +15,7 @@
         "type": "git",
         "url": "https://github.com/noklam/vscode-python-tools-extension-template.git"
     },
+    "icon": "assets/icon.png",
     "bugs": {
         "url": "https://github.com/noklam/vscode-python-tools-extension-template/issues"
     },
