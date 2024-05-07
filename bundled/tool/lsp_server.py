@@ -58,6 +58,7 @@ from lsprotocol.types import (
     TEXT_DOCUMENT_DEFINITION,
     TEXT_DOCUMENT_REFERENCES,
     TEXT_DOCUMENT_COMPLETION,
+    TEXT_DOCUMENT_HOVER,
     WORKSPACE_DID_CHANGE_CONFIGURATION,
     CompletionOptions,
     CompletionParams,
@@ -68,7 +69,12 @@ from lsprotocol.types import (
     Position,
     Range,
     TextDocumentPositionParams,
+    HoverParams,
+    MarkupContent,
+    MarkupKind,
+    Hover,
 )
+
 
 from pygls.workspace import TextDocument
 
@@ -587,6 +593,25 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
         #     CompletionItem(label='learning_rate'),
         # ]
     )
+
+
+# @LSP_SERVER.feature(TEXT_DOCUMENT_HOVER)
+# def hover(ls: KedroLanguageServer, params: HoverParams):
+#     pos = params.position
+#     document_uri = params.text_document.uri
+#     document = ls.workspace.get_text_document(document_uri)
+#     model_option = ls.dummy_catalog.load("params:model_options")
+
+#     return Hover(
+#         contents=MarkupContent(
+#             kind=MarkupKind.Markdown,
+#             value="\n".join(str(model_option)),
+#         ),
+#         range=Range(
+#             start=Position(line=pos.line, character=0),
+#             end=Position(line=pos.line + 1, character=0),
+#         ),
+#     )
 
 
 ### End of Old kedro-lsp
