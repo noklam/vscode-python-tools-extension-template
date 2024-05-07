@@ -403,7 +403,7 @@ def definition(
     )
     word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
 
-    log_to_output(f"Query keyword for params: {word}")
+    logger.warning(f"Query keyword for params: {word}")
 
     if word.startswith("params:"):
         param_location = _get_param_location(server.project_metadata, word)
@@ -414,10 +414,10 @@ def definition(
     catalog_paths = get_conf_paths(server.project_metadata)
 
     catalog_word = document.word_at_position(params.position)
-    log_to_output(f"Attempt to search `{catalog_word}` from catalog")
-    log_to_output(f"{catalog_paths}")
+    logger.warning(f"Attempt to search `{catalog_word}` from catalog")
+    logger.warning(f"{catalog_paths=}")
     for catalog_path in catalog_paths:
-        log_to_output("{catalog_path=}")
+        logger.warning("    {catalog_path=}")
         catalog_conf = yaml.load(catalog_path.read_text(), Loader=SafeLineLoader)
 
         if word in catalog_conf:
@@ -435,7 +435,18 @@ def definition(
             logger.warning(f"{location=}")
             return [location]
 
-    return None
+    # pos = params.position
+    # fake_location = Location(uri = params.text_document.uri, range = Range(
+    #             start= Position(line= pos.line, character=pos.character ),
+    #             # end = Position(line= pos.line, character=pos.character )
+    #             )
+    # )
+    uri = params.text_document.uri
+    pos = params.position
+    curr_pos =  Position(line= pos.line, character=pos.character)
+    return Location(uri = uri, range =  Range(start=curr_pos, end=curr_pos))
+    # return params
+    # return None
 
 
 def reference_location(path, line):
@@ -449,7 +460,7 @@ def reference_location(path, line):
             ),
         ),
     )
-    log_to_output(f"{location=}")
+    logger.warning(f"{location=}")
     return location
 
 
@@ -494,7 +505,7 @@ def references(
     # dummy_locations=None
     # locations = dummy_locations
 
-    log_to_output(f"Query Reference keyword: {word}")
+    logger.warning(f"Query Reference keyword: {word}")
     word = word.strip(":")
     import importlib_resources
     from kedro.framework.project import PACKAGE_NAME
@@ -539,7 +550,7 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
     _check_project()
     if not server.is_kedro_project():
         return None
-    log_to_output("Completion")
+    logger.warning("Completion")
     ...
     server.dummy_catalog
 
@@ -561,17 +572,17 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
 ### End of Old kedro-lsp
 
 
-### Start of YAML template action
-@LSP_SERVER.feature(
-    TEXT_DOCUMENT_CODE_ACTION,
-    CodeActionOptions(code_action_kinds=[CodeActionKind.QuickFix]),
-)
-def code_actions(params: CodeActionParams):
-    log_to_output("Trigger Code Action")
-    document_uri = params.text_document.uri
-    LSP_SERVER.workspace.get_text_document(document_uri)
+### Code Action
+# @LSP_SERVER.feature(
+#     TEXT_DOCUMENT_CODE_ACTION,
+#     CodeActionOptions(code_action_kinds=[CodeActionKind.QuickFix]),
+# )
+# def code_actions(params: CodeActionParams):
+#     log_to_output("Trigger Code Action")
+#     document_uri = params.text_document.uri
+#     LSP_SERVER.workspace.get_text_document(document_uri)
 
-    return None
+#     return None
 
 
 # *****************************************************
