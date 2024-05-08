@@ -577,14 +577,14 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
         return None
     if not server.is_kedro_project():
         return None
-    log_for_lsp_debug("Completion")
-    ...
-    server.dummy_catalog
+    if not _is_pipeline(params.text_document.uri):
+        return
 
     completion_items = []
     for item in server.dummy_catalog.list():
         completion_items.append(CompletionItem(label=item))
 
+    # todo: use MarkedUpContent
     return CompletionList(
         is_incomplete=False,
         items=completion_items,
@@ -603,8 +603,7 @@ def hover(ls: KedroLanguageServer, params: HoverParams):
     pos = params.position
     document_uri = params.text_document.uri
 
-    filename = Path(document_uri).name
-    if "pipeline" not in str(filename):
+    if not _is_pipeline(document_uri):
         return
     document = ls.workspace.get_text_document(document_uri)
     model_option = ls.dummy_catalog.load("params:model_options")
@@ -633,6 +632,12 @@ def hover(ls: KedroLanguageServer, params: HoverParams):
         ),
     )
 
+def _is_pipeline(uri):
+    from pathlib import Path
+    filename = Path(uri).name
+    if "pipeline" in str(filename):
+        return True
+    return False
 
 ### End of Old kedro-lsp
 
