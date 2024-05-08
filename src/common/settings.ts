@@ -13,6 +13,7 @@ export interface ISettings {
     interpreter: string[];
     importStrategy: string;
     showNotifications: string;
+    isExperimental: string;
 }
 
 export function getExtensionSettings(namespace: string, includeInterpreter?: boolean): Promise<ISettings[]> {
@@ -69,7 +70,7 @@ export async function getWorkspaceSettings(
         interpreter: resolveVariables(interpreter, workspace),
         importStrategy: config.get<string>(`importStrategy`) ?? 'useBundled',
         showNotifications: config.get<string>(`showNotifications`) ?? 'off',
-        isExperimental: config.get<string>(`isExperimental`) ?? 'yes',
+        isExperimental: config.get<string>(`isExperimental`) ?? 'no',
     };
     return workspaceSetting;
 }
@@ -98,7 +99,7 @@ export async function getGlobalSettings(namespace: string, includeInterpreter?: 
         interpreter: interpreter,
         importStrategy: getGlobalValue<string>(config, 'importStrategy', 'useBundled'),
         showNotifications: getGlobalValue<string>(config, 'showNotifications', 'off'),
-        isExperimental: getGlobalValue<string>(config, 'isExperimental', 'yes'),
+        isExperimental: getGlobalValue<string>(config, 'isExperimental', 'no'),
     };
     return setting;
 }

@@ -95,7 +95,7 @@
                     "type": "array"
                 },
                 "kedro.isExperimental": {
-                    "default": "yes",
+                    "default": "no",
                     "description": "Enable experimental features like autocompletion.",
                     "enum": [
                         "yes",
