@@ -72,6 +72,7 @@ from lsprotocol.types import (
     HoverParams,
     MarkupContent,
     MarkupKind,
+    MarkedString,
     Hover,
 )
 
@@ -595,23 +596,42 @@ def completions(server: KedroLanguageServer, params: CompletionParams):
     )
 
 
-# @LSP_SERVER.feature(TEXT_DOCUMENT_HOVER)
-# def hover(ls: KedroLanguageServer, params: HoverParams):
-#     pos = params.position
-#     document_uri = params.text_document.uri
-#     document = ls.workspace.get_text_document(document_uri)
-#     model_option = ls.dummy_catalog.load("params:model_options")
+@LSP_SERVER.feature(TEXT_DOCUMENT_HOVER)
+def hover(ls: KedroLanguageServer, params: HoverParams):
+    import pprint
+    from pathlib import Path
+    pos = params.position
+    document_uri = params.text_document.uri
 
-#     return Hover(
-#         contents=MarkupContent(
-#             kind=MarkupKind.Markdown,
-#             value="\n".join(str(model_option)),
-#         ),
-#         range=Range(
-#             start=Position(line=pos.line, character=0),
-#             end=Position(line=pos.line + 1, character=0),
-#         ),
-#     )
+    filename = Path(document_uri).name
+    if "pipeline" not in str(filename):
+        return
+    document = ls.workspace.get_text_document(document_uri)
+    model_option = ls.dummy_catalog.load("params:model_options")
+
+    word = document.word_at_position(params.position, RE_START_WORD, RE_END_WORD)
+    if not word.startswith("params:"):
+        return
+    param_value = ls.dummy_catalog.load(word)
+    highlight = pprint.pformat(param_value)
+    content = f"""```python
+{highlight}
+```"""
+    return Hover(contents = MarkupContent(kind=MarkupKind.Markdown, value=content),
+                 range=Range(
+            start=Position(line=pos.line, character=0),
+            end=Position(line=pos.line + 1, character=0),
+        ))
+    return Hover(
+        contents=MarkupContent(
+            kind=MarkupKind.Markdown,
+            value="\n".join(str(model_option)),
+        ),
+        range=Range(
+            start=Position(line=pos.line, character=0),
+            end=Position(line=pos.line + 1, character=0),
+        ),
+    )
 
 
 ### End of Old kedro-lsp
