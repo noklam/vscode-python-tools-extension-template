@@ -18,12 +18,18 @@ Use `Cmd` (Mac)/ `Ctrl` (Window) + `Click` or `F12` to trigger `Go to Definition
 ![go to definition](assets/lsp-go-to-definition.gif)
 
 ## Go to Reference from configuration files to pipeline.py
-Right click and trigger `Find Reference` or use the shortcut `Shift` + `F12`
+- `Cmd` or `Ctrl` (Window) + `Click` on the definition.
+- Use `Find Reference`
+- Use the shortcut `Shift` + `F12`
 ![find reference](assets/lsp-find-reference.gif)
 
 ## Autocompletion in Python
-Type `"` in the editor and it should trigger the autocompletion list.
+Type `"` in any `pipeline.py` and it should trigger the autocompletion list.
 ![autocompletion](assets/lsp-autocompletion.gif)
 
 ## Schema Validation
-![schema valiadtion](assets/lsp-schema-validation.gif)
+![schema validation](assets/lsp-schema-validation.gif)
+
+## Hover
+Just hover your mouse over any `params:` or hit the command `Show or Focus Hover`
+![hover](assets/lsp-hover.gif)
